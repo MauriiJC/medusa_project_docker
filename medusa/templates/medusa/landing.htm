@@ -1,0 +1,133 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Medusa — Tu aliada digital contra la violencia de género{% endblock %}
+
+{% block content %}
+
+<!-- ══ NAVBAR ══ -->
+<nav class="navbar">
+  <div class="navbar__brand">
+    <div class="navbar__logo"></div>
+    <div class="navbar__brand-text">
+      <span class="navbar__brand-name">Medusa</span>
+      <span class="navbar__brand-sub">by SOS Mujer Berraca</span>
+    </div>
+  </div>
+
+  <div class="navbar__links">
+    <a href="#" class="navbar__link">Inicio</a>
+    <a href="#" class="navbar__link">Recursos</a>
+    <a href="#" class="navbar__link">Sobre Medusa</a>
+    <a href="#" class="navbar__link navbar__link--emergency">Emergencia</a>
+  </div>
+
+  <div class="navbar__actions">
+    {% if user.is_authenticated %}
+      <a href="{% url 'chat' %}" class="btn-filled">Ir al chat</a>
+      <form method="post" action="{% url 'logout' %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="btn-outline">Cerrar sesión</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}" class="btn-outline">Iniciar sesión</a>
+      <a href="{% url 'registro' %}" class="btn-filled">Crear cuenta</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ══ LANDING ══ -->
+<main class="landing">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero__deco-top-right"></div>
+    <div class="hero__deco-bottom-left"></div>
+
+    <div class="hero__content">
+      <span class="hero__badge">💜&nbsp; Sistema Multi-IA Adaptativo</span>
+      <h1 class="hero__title-main">Medusa</h1>
+      <p class="hero__title-sub1">Tu aliada digital</p>
+      <p class="hero__title-sub2">contra la violencia de género</p>
+      <p class="hero__description">
+        Acompañamiento empático 24/7, orientación legal y apoyo emocional.<br>
+        Desarrollado por SOS Mujer Berraca en Colombia.
+      </p>
+      <div class="hero__ctas">
+        <a href="{% url 'registro' %}" class="cta-primary">✨&nbsp; Comenzar ahora</a>
+        <a href="{% url 'login' %}" class="cta-secondary">Ya tengo cuenta</a>
+      </div>
+    </div>
+
+    <!-- Chat Preview -->
+    <div class="chat-preview">
+      <div class="chat-preview__header">
+        <span class="chat-preview__dot chat-preview__dot--red"></span>
+        <span class="chat-preview__dot chat-preview__dot--yellow"></span>
+        <span class="chat-preview__dot chat-preview__dot--green"></span>
+        <span class="chat-preview__title">Medusa — Chat</span>
+      </div>
+
+      <div class="chat-preview__messages">
+        <div class="msg msg--user">
+          <span class="msg__bubble msg__bubble--user">¿Qué hago si tengo miedo en casa?</span>
+        </div>
+        <div class="msg msg--bot">
+          <span class="msg__bubble msg__bubble--bot">Entiendo lo que sientes. No estás sola. Llama a la Línea 155 si hay peligro inmediato.</span>
+        </div>
+        <div class="msg msg--user">
+          <span class="msg__bubble msg__bubble--user">¿Puedo hacer una denuncia anónima?</span>
+        </div>
+        <div class="msg msg--bot">
+          <span class="msg__bubble msg__bubble--bot">Sí, puedes acudir a la Comisaría de Familia sin identificarte inicialmente.</span>
+        </div>
+        <div class="typing">
+          <span class="typing__dot"></span>
+          <span class="typing__dot"></span>
+          <span class="typing__dot"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Strip -->
+  <section class="features-strip">
+    <span class="feature-chip">🛡️ Confidencial</span>
+    <span class="feature-chip">💜 Empático</span>
+    <span class="feature-chip">⚖️ Ley colombiana</span>
+    <span class="feature-chip">🔄 Multi-IA</span>
+    <span class="feature-chip">🆘 Línea 155</span>
+    <span class="feature-chip">🌍 Disponible 24/7</span>
+  </section>
+
+  <!-- Info / Project -->
+  <section class="info-section">
+    <h2 class="info-section__title">¿Qué es Medusa?</h2>
+    <p class="info-section__description">
+      Medusa no es un chatbot convencional. Es un sistema de orquestación de múltiples IAs especializadas
+      integradas mediante n8n, entrenadas con casos reales de violencia de género en Colombia.
+      Aprende, acumula conocimiento y mejora progresivamente.
+    </p>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-card__value">24/7</div>
+        <div class="stat-card__label">Disponibilidad</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">Multi-IA</div>
+        <div class="stat-card__label">Arquitectura</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">155</div>
+        <div class="stat-card__label">Línea de emergencia</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card__value">100%</div>
+        <div class="stat-card__label">Confidencial</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+{% endblock %}

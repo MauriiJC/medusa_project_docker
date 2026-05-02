@@ -1,0 +1,97 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Crear cuenta — Medusa{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+
+  <!-- ══ BRAND PANEL (izquierda) ══ -->
+  <div class="brand-panel brand-panel--register">
+    <div class="brand-panel__deco brand-panel__deco--top"></div>
+    <div class="brand-panel__deco brand-panel__deco--bottom"></div>
+
+    <h1 class="brand-panel__title">Únete a la<br>comunidad</h1>
+    <p class="brand-panel__subtitle">
+      SOS Mujer Berraca · Pasto, Nariño<br>
+      Protección, dignidad y apoyo para todas.
+    </p>
+    <div class="privacy-note">
+      🔒 Tus conversaciones son privadas y confidenciales. Nunca compartimos tu info.
+    </div>
+  </div>
+
+  <!-- ══ FORM PANEL (derecha) ══ -->
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="form-card__body">
+        <h2 class="form-card__title">Crear cuenta</h2>
+        <p class="form-card__subtitle">Empieza tu camino con Medusa hoy</p>
+
+        <form method="post" action="{% url 'registro' %}">
+          {% csrf_token %}
+
+          <div class="form-fields">
+            <div class="form-group">
+              <label class="form-group__label" for="nombre">Nombre (opcional)</label>
+              <input class="form-group__input" type="text" id="nombre" name="nombre"
+                placeholder="¿Cómo quieres que te llame Medusa?" autocomplete="given-name"
+                value="{{ form.nombre.value|default:'' }}">
+            </div>
+            <div class="form-group">
+              <label class="form-group__label" for="email">Correo electrónico</label>
+              <input class="form-group__input{% if form.email.errors %} form-group__input--error{% endif %}"
+                type="email" id="email" name="email"
+                placeholder="tu@correo.com" autocomplete="email"
+                value="{{ form.email.value|default:'' }}">
+              {% for error in form.email.errors %}
+                <p class="form-error">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div class="form-group">
+              <label class="form-group__label" for="password">Contraseña</label>
+              <input class="form-group__input{% if form.password.errors %} form-group__input--error{% endif %}"
+                type="password" id="password" name="password"
+                placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+              {% for error in form.password.errors %}
+                <p class="form-error">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div class="form-group">
+              <label class="form-group__label" for="password2">Confirmar contraseña</label>
+              <input class="form-group__input{% if form.password2.errors %} form-group__input--error{% endif %}"
+                type="password" id="password2" name="password2"
+                placeholder="Repite tu contraseña" autocomplete="new-password">
+              {% for error in form.password2.errors %}
+                <p class="form-error">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="terminos" name="terminos"
+              {% if form.terminos.value %}checked{% endif %}>
+            <label for="terminos">
+              Acepto los términos de uso y política de privacidad. Entiendo que mis conversaciones son confidenciales.
+            </label>
+          </div>
+          {% for error in form.terminos.errors %}
+            <p class="form-error">{{ error }}</p>
+          {% endfor %}
+
+          <button type="submit" class="btn-submit">Crear mi cuenta</button>
+        </form>
+
+        <p class="form-card__login-link">
+          ¿Ya tienes cuenta?&nbsp;<a href="{% url 'login' %}">Iniciar sesión</a>
+        </p>
+      </div>
+
+      <div class="emergency-strip">
+        🆘&nbsp; En emergencia llama al 155 · Gratuito 24/7
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Chat — Medusa{% endblock %}
+{% block body_class %}chat-page{% endblock %}
+
+{% block content %}
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sidebar__header">
+    <button class="btn-new-chat">+ Nueva conversación</button>
+  </div>
+
+  <input class="sidebar__search" type="text" placeholder="🔍 Buscar chats...">
+
+  <div class="sidebar__history">
+    <div class="sidebar__section-label">Hoy</div>
+    <div class="chat-item chat-item--active">¿Qué hacer si siento miedo?</div>
+    <div class="chat-item">Recursos legales en Colombia</div>
+    <div class="chat-item">Apoyo psicológico disponible</div>
+    <div class="chat-item">Cómo hacer una denuncia</div>
+
+    <div class="sidebar__section-label">Ayer</div>
+    <div class="chat-item">Plan de seguridad personal</div>
+    <div class="chat-item">Líneas de ayuda en Pasto</div>
+  </div>
+
+  <div class="sidebar__footer">
+    <div class="sidebar__avatar">{{ user.first_name.0|upper|default:user.username.0|upper }}</div>
+    <div class="sidebar__user-info">
+      <div class="sidebar__user-name">{{ user.first_name|default:user.username }}</div>
+      <div class="sidebar__user-status">Cuenta protegida</div>
+    </div>
+    <form method="post" action="{% url 'logout' %}" style="display:contents">
+      {% csrf_token %}
+      <button type="submit" class="sidebar__logout">Salir</button>
+    </form>
+  </div>
+</aside>
+
+<!-- ══ CHAT MAIN ══ -->
+<main class="chat-main">
+
+  <!-- Topbar -->
+  <div class="chat-topbar">
+    <div class="chat-topbar__hamburger" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </div>
+    <h1 class="chat-topbar__title">¿Qué hacer si siento miedo en casa?</h1>
+    <a href="tel:155" class="emergency-pill">🆘 Línea 155</a>
+  </div>
+
+  <!-- Messages -->
+  <div class="chat-messages">
+
+    <!-- Usuario -->
+    <div class="chat-msg chat-msg--user">
+      <span class="chat-msg__sender">Tú</span>
+      <div class="chat-msg__row">
+        <div class="chat-msg__bubble chat-msg__bubble--user">
+          ¿Qué hacer si siento miedo en casa?
+        </div>
+      </div>
+    </div>
+
+    <!-- Medusa -->
+    <div class="chat-msg chat-msg--bot">
+      <span class="chat-msg__sender">Medusa</span>
+      <div class="chat-msg__row">
+        <div class="chat-msg__avatar">M</div>
+        <div class="chat-msg__bubble chat-msg__bubble--bot">
+          Entiendo lo que sientes. Primero, quiero que sepas que no estás sola. Si sientes peligro inmediato, llama al 155 (gratuito, 24h). Es la Línea Nacional de Violencias. Puedes hablar con alguien de confianza. ¿Me puedes contar un poco más sobre la situación para orientarte mejor?
+        </div>
+      </div>
+    </div>
+
+    <!-- Usuario -->
+    <div class="chat-msg chat-msg--user">
+      <span class="chat-msg__sender">Tú</span>
+      <div class="chat-msg__row">
+        <div class="chat-msg__bubble chat-msg__bubble--user">
+          Mi pareja me grita mucho y a veces me empuja
+        </div>
+      </div>
+    </div>
+
+    <!-- Medusa -->
+    <div class="chat-msg chat-msg--bot">
+      <span class="chat-msg__sender">Medusa</span>
+      <div class="chat-msg__row">
+        <div class="chat-msg__avatar">M</div>
+        <div class="chat-msg__bubble chat-msg__bubble--bot">
+          Lo que describes es violencia de género — física y psicológica. Tienes derecho a vivir en paz y con dignidad. Puedes ir a la Comisaría de Familia más cercana para solicitar medidas de protección. No necesitas un abogado para hacerlo. ¿Tienes a alguien de confianza con quien puedas estar esta noche?
+        </div>
+      </div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div class="chat-typing">
+      <div class="chat-typing__avatar">M</div>
+      <div class="chat-typing__bubble">
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+        <span class="typing-dot"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Input Area -->
+  <div class="chat-input-area">
+    <div class="chat-input-row">
+      <input class="chat-input" type="text" placeholder="Escribe tu mensaje a Medusa...">
+      <button class="btn-send" aria-label="Enviar">&#8594;</button>
+    </div>
+    <p class="chat-input-footer">En emergencia llama al 155 &nbsp;·&nbsp; Presiona Enter para enviar</p>
+  </div>
+
+</main>
+
+{% endblock %}

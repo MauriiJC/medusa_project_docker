@@ -1,0 +1,96 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Iniciar sesión — Medusa{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+
+  <!-- ══ BRAND PANEL (izquierda) ══ -->
+  <div class="brand-panel">
+    <div class="brand-panel__deco brand-panel__deco--top"></div>
+    <div class="brand-panel__deco brand-panel__deco--bottom"></div>
+    <div class="brand-panel__deco brand-panel__deco--small"></div>
+
+    <h1 class="brand-panel__title">Medusa</h1>
+    <p class="brand-panel__subtitle">
+      Sistema de IA para acompañamiento<br>
+      a mujeres víctimas de violencia de género
+    </p>
+    <div class="emergency-badge">
+      🆘&nbsp; Emergencia: Llama al 155 · Gratuito 24/7
+    </div>
+  </div>
+
+  <!-- ══ FORM PANEL (derecha) ══ -->
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="form-card__body">
+        <h2 class="form-card__title">Bienvenida de nuevo</h2>
+        <p class="form-card__subtitle">Inicia sesión para continuar con Medusa</p>
+
+        {% if messages %}
+          {% for message in messages %}
+            <p class="form-error">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+          {% csrf_token %}
+
+          <div class="form-fields">
+            <div class="form-group">
+              <label class="form-group__label" for="email">Correo electrónico</label>
+              <input class="form-group__input{% if form.email.errors %} form-group__input--error{% endif %}"
+                     type="email" id="email" name="email"
+                     placeholder="tu@correo.com" autocomplete="email"
+                     value="{{ form.email.value|default:'' }}">
+              {% for error in form.email.errors %}
+                <p class="form-error">{{ error }}</p>
+              {% endfor %}
+            </div>
+            <div class="form-group">
+              <label class="form-group__label" for="password">Contraseña</label>
+              <input class="form-group__input{% if form.password.errors %} form-group__input--error{% endif %}"
+                     type="password" id="password" name="password"
+                     placeholder="••••••••" autocomplete="current-password">
+              {% for error in form.password.errors %}
+                <p class="form-error">{{ error }}</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <a href="#" class="form-card__forgot">¿Olvidaste tu contraseña?</a>
+
+          <button type="submit" class="btn-submit">Iniciar sesión</button>
+        </form>
+
+        <div class="divider">
+          <span class="divider__line"></span>
+          <span class="divider__text">o continúa con</span>
+          <span class="divider__line"></span>
+        </div>
+
+        <button type="button" class="btn-google" onclick="window.location.href='{% url 'google_login_start' %}'">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.64 9.2045c0-.638-.0573-1.252-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9087C16.6582 14.2527 17.64 11.9455 17.64 9.2045z" fill="#4285F4"/>
+            <path d="M9 18c2.43 0 4.4673-.8063 5.9564-2.1804l-2.9087-2.2581c-.8063.54-1.8368.8591-3.0477.8591-2.3441 0-4.3282-1.5832-5.036-3.71H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/>
+            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.6818 9c0-.5891.1009-1.1618.2823-1.71V4.9582H.9574A8.9961 8.9961 0 0 0 0 9c0 1.4518.3477 2.8254.9574 4.0418L3.964 10.71z" fill="#FBBC05"/>
+            <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1627 6.6559 3.5795 9 3.5795z" fill="#EA4335"/>
+          </svg>
+          Continuar con Google
+        </button>
+
+        <p class="form-card__login-link">
+          ¿No tienes cuenta?&nbsp;<a href="{% url 'registro' %}">Crear cuenta</a>
+        </p>
+      </div>
+
+      <div class="emergency-strip">
+        🆘&nbsp; ¿Estás en peligro ahora? Llama al 155 — Línea gratuita 24 horas
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
