@@ -10,4 +10,7 @@ urlpatterns = [
     path('google-login/', views.google_login_start, name='google_login_start'),
     path('logout/', views.logout_view, name='logout'),
     path('chat/', views.chat, name='chat'),
+    path('api/chat/', views.chat_api, name='chat_api'),
+    path('api/agente/', views.agente_api, name='agente_api'),
+    path('api/clasificar/', views.clasificar_api, name='clasificar_api'),
 ]

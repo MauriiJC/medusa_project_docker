@@ -1,13 +1,78 @@
+import os
+import requests as http_requests
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 
 from .forms import LoginForm, OTPForm, RegistrationForm
 from .models import OTPCode
+
+
+# ── Directorio de prompts ──────────────────────────────────────────────────────
+PROMPTS_DIR = os.path.join(os.path.dirname(__file__), 'prompts')
+
+
+def _cargar_prompt(nombre_archivo):
+    """Carga un prompt desde el archivo .txt correspondiente."""
+    ruta = os.path.join(PROMPTS_DIR, nombre_archivo)
+    with open(ruta, encoding='utf-8') as f:
+        return f.read()
+
+
+# ── Llamada base a Ollama ──────────────────────────────────────────────────────
+OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
+
+
+def _llamar_ollama(prompt, num_predict=180, num_ctx=2048):
+    """Envía un prompt a Ollama y devuelve el texto de la respuesta."""
+    respuesta = http_requests.post(
+        OLLAMA_URL,
+        json={
+            'model': 'mistral',
+            'prompt': prompt,
+            'stream': False,
+            'options': {
+                'num_predict': num_predict,
+                'num_ctx': num_ctx,
+                'num_gpu': 99,
+                'temperature': 0.7,
+                'top_k': 40,
+                'top_p': 0.9,
+            },
+        },
+        timeout=120,
+    )
+    return respuesta.json().get('response', '').strip()
+
+
+# ── Clasificador ───────────────────────────────────────────────────────────────
+def _clasificar_mensaje(mensaje):
+    """
+    Llama al agente clasificador y devuelve 'CRISIS', 'LEGAL' o 'EMOCIONAL'.
+    Usa contexto mínimo para ser rápido — solo necesita responder una palabra.
+    """
+    prompt = _cargar_prompt('clasificador.txt').format(mensaje=mensaje)
+    resultado = _llamar_ollama(prompt, num_predict=5, num_ctx=512)
+    # Normalizar — tomar solo la primera palabra en mayúsculas
+    palabra = resultado.strip().upper().split()[0] if resultado.strip() else ''
+    if palabra in ('CRISIS', 'LEGAL', 'EMOCIONAL'):
+        return palabra
+    return 'EMOCIONAL'  # fallback seguro
+
+
+# ── Mapa de agentes ────────────────────────────────────────────────────────────
+AGENTES = {
+    'CRISIS':    'agente_crisis.txt',
+    'LEGAL':     'agente_legal.txt',
+    'EMOCIONAL': 'agente_emocional.txt',
+}
 
 
 def landing(request):
@@ -132,6 +197,113 @@ def logout_view(request):
 @login_required
 def chat(request):
     return render(request, 'medusa/chat.htm', {'user': request.user})
+
+
+@csrf_exempt
+@login_required
+def chat_api(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    mensaje = request.POST.get('mensaje', '').strip()
+    if not mensaje:
+        return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+
+    # ── Filtro rápido para saludos simples ────────────────────────────────────
+    saludos_simples = {'hola', 'buenas', 'ola', 'hi', 'hello', 'buenos dias', 'buenas tardes', 'buenas noches'}
+    if mensaje.lower() in saludos_simples:
+        return JsonResponse({
+            'respuesta': '¡Hola! Qué gusto que estés por aquí. ¿Cómo te sientes hoy o de qué te gustaría hablar?',
+            'agente': 'EMOCIONAL'
+        })
+
+    # ── Intento 1: orquestar a través de n8n ──────────────────────────────────
+    try:
+        res = http_requests.post(
+            'http://localhost:5678/webhook/medusa',
+            json={'mensaje': mensaje},
+            timeout=120,
+        )
+        if res.status_code == 200:
+            data = res.json()
+            return JsonResponse({
+                'respuesta': data.get('respuesta', 'Sin respuesta del agente.'),
+                'agente':    data.get('agente', 'EMOCIONAL'),
+            })
+    except Exception:
+        pass  # n8n no disponible → fallback directo a Ollama
+
+    # ── Fallback: llamada directa a Ollama (si n8n no está corriendo) ─────────
+    try:
+        tipo   = _clasificar_mensaje(mensaje)
+        prompt = _cargar_prompt(AGENTES[tipo]).format(mensaje=mensaje)
+        texto  = _llamar_ollama(prompt)
+        return JsonResponse({'respuesta': texto, 'agente': tipo})
+    except Exception as e:
+        return JsonResponse({'respuesta': f'Error al conectar con el modelo: {str(e)}'})
+
+@csrf_exempt
+def clasificar_api(request):
+    """
+    Endpoint interno llamado por n8n para clasificar el mensaje.
+    Recibe JSON: { "mensaje": "..." }
+    Devuelve JSON: { "tipo": "CRISIS|LEGAL|EMOCIONAL" }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    mensaje = body.get('mensaje', '').strip()
+    if not mensaje:
+        return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+
+    try:
+        tipo = _clasificar_mensaje(mensaje)
+        return JsonResponse({'tipo': tipo})
+    except Exception as e:
+        return JsonResponse({'tipo': 'EMOCIONAL', 'error': str(e)})
+
+
+@csrf_exempt
+def agente_api(request):
+    """
+    Endpoint interno llamado por n8n.
+    Recibe JSON: { "mensaje": "...", "tipo": "CRISIS|LEGAL|EMOCIONAL" }
+    Lee el prompt .txt del proyecto Django y llama a Ollama.
+    No requiere login porque solo es accesible desde localhost (n8n).
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+    except Exception:
+        return JsonResponse({'error': 'JSON inválido'}, status=400)
+
+    mensaje = body.get('mensaje', '').strip()
+    tipo    = body.get('tipo', 'EMOCIONAL').strip().upper()
+
+    if not mensaje:
+        return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+
+    if tipo not in AGENTES:
+        tipo = 'EMOCIONAL'
+
+    try:
+        prompt = _cargar_prompt(AGENTES[tipo]).format(mensaje=mensaje)
+        texto  = _llamar_ollama(prompt)
+        return JsonResponse({'respuesta': texto, 'agente': tipo})
+    except Exception as e:
+        return JsonResponse(
+            {'respuesta': f'Error al conectar con el modelo: {str(e)}'},
+            status=500,
+        )
 
 
 def _send_otp_email(user, code):

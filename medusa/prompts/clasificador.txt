@@ -1,0 +1,15 @@
+Tu única tarea es leer el siguiente mensaje y clasificarlo en UNA sola categoría.
+
+Responde ÚNICAMENTE con una de estas tres palabras exactas, sin explicaciones, sin puntuación, sin nada más:
+CRISIS
+LEGAL
+EMOCIONAL
+
+Criterios:
+- CRISIS: la persona menciona peligro inmediato, amenazas de muerte, agresión física en este momento, miedo a ser atacada ahora, querer huir urgente, o cualquier riesgo para su vida o la de sus hijos.
+- LEGAL: la persona pregunta sobre derechos, denuncias, medidas de protección, procesos judiciales, qué puede hacer legalmente, cómo separarse, órdenes de alejamiento, o menciona Comisaría, Fiscalía, ICBF o leyes.
+- EMOCIONAL: la persona necesita ser escuchada, habla de sus sentimientos, relata lo que vive, pide consejo general, no sabe qué hacer, siente confusión, tristeza, miedo sin peligro inmediato, o no encaja en las otras dos categorías.
+
+Mensaje: {mensaje}
+
+Responde solo la palabra:

@@ -9,21 +9,14 @@
 <!-- ══ SIDEBAR ══ -->
 <aside class="sidebar">
   <div class="sidebar__header">
-    <button class="btn-new-chat">+ Nueva conversación</button>
+    <button class="btn-new-chat" onclick="nuevaConversacion()">+ Nueva conversación</button>
   </div>
 
   <input class="sidebar__search" type="text" placeholder="🔍 Buscar chats...">
 
-  <div class="sidebar__history">
-    <div class="sidebar__section-label">Hoy</div>
-    <div class="chat-item chat-item--active">¿Qué hacer si siento miedo?</div>
-    <div class="chat-item">Recursos legales en Colombia</div>
-    <div class="chat-item">Apoyo psicológico disponible</div>
-    <div class="chat-item">Cómo hacer una denuncia</div>
-
-    <div class="sidebar__section-label">Ayer</div>
-    <div class="chat-item">Plan de seguridad personal</div>
-    <div class="chat-item">Líneas de ayuda en Pasto</div>
+  <div class="sidebar__history" id="historialChats">
+    <div class="sidebar__section-label">Sesión actual</div>
+    <div class="chat-item chat-item--active" id="itemSesionActual">Nueva conversación</div>
   </div>
 
   <div class="sidebar__footer">
@@ -47,57 +40,39 @@
     <div class="chat-topbar__hamburger" aria-label="Menú">
       <span></span><span></span><span></span>
     </div>
-    <h1 class="chat-topbar__title">¿Qué hacer si siento miedo en casa?</h1>
+    <h1 class="chat-topbar__title" id="tituloChat">Medusa — Estoy aquí para escucharte</h1>
     <a href="tel:155" class="emergency-pill">🆘 Línea 155</a>
   </div>
 
   <!-- Messages -->
-  <div class="chat-messages">
+  <div class="chat-messages" id="chatMessages">
 
-    <!-- Usuario -->
-    <div class="chat-msg chat-msg--user">
-      <span class="chat-msg__sender">Tú</span>
-      <div class="chat-msg__row">
-        <div class="chat-msg__bubble chat-msg__bubble--user">
-          ¿Qué hacer si siento miedo en casa?
-        </div>
+    <!-- Pantalla de bienvenida -->
+    <div id="welcomeScreen" class="welcome-screen">
+      <div class="welcome-avatar">M</div>
+      <h2 class="welcome-title">Hola, soy Medusa</h2>
+      <p class="welcome-desc">
+        Estoy aquí para escucharte y acompañarte. Puedes contarme lo que sientes
+        con confianza — nada de lo que digas te va a perjudicar.
+      </p>
+      <div class="welcome-suggestions">
+        <button class="suggestion-chip" onclick="usarSugerencia('No sé si lo que vivo es violencia')">
+          ¿Es esto violencia?
+        </button>
+        <button class="suggestion-chip" onclick="usarSugerencia('Siento miedo en casa y no sé qué hacer')">
+          Siento miedo en casa
+        </button>
+        <button class="suggestion-chip" onclick="usarSugerencia('Quiero saber qué derechos tengo')">
+          ¿Qué derechos tengo?
+        </button>
+        <button class="suggestion-chip" onclick="usarSugerencia('Necesito ayuda pero no sé cómo empezar')">
+          No sé cómo empezar
+        </button>
       </div>
     </div>
 
-    <!-- Medusa -->
-    <div class="chat-msg chat-msg--bot">
-      <span class="chat-msg__sender">Medusa</span>
-      <div class="chat-msg__row">
-        <div class="chat-msg__avatar">M</div>
-        <div class="chat-msg__bubble chat-msg__bubble--bot">
-          Entiendo lo que sientes. Primero, quiero que sepas que no estás sola. Si sientes peligro inmediato, llama al 155 (gratuito, 24h). Es la Línea Nacional de Violencias. Puedes hablar con alguien de confianza. ¿Me puedes contar un poco más sobre la situación para orientarte mejor?
-        </div>
-      </div>
-    </div>
-
-    <!-- Usuario -->
-    <div class="chat-msg chat-msg--user">
-      <span class="chat-msg__sender">Tú</span>
-      <div class="chat-msg__row">
-        <div class="chat-msg__bubble chat-msg__bubble--user">
-          Mi pareja me grita mucho y a veces me empuja
-        </div>
-      </div>
-    </div>
-
-    <!-- Medusa -->
-    <div class="chat-msg chat-msg--bot">
-      <span class="chat-msg__sender">Medusa</span>
-      <div class="chat-msg__row">
-        <div class="chat-msg__avatar">M</div>
-        <div class="chat-msg__bubble chat-msg__bubble--bot">
-          Lo que describes es violencia de género — física y psicológica. Tienes derecho a vivir en paz y con dignidad. Puedes ir a la Comisaría de Familia más cercana para solicitar medidas de protección. No necesitas un abogado para hacerlo. ¿Tienes a alguien de confianza con quien puedas estar esta noche?
-        </div>
-      </div>
-    </div>
-
-    <!-- Typing indicator -->
-    <div class="chat-typing">
+    <!-- Indicador de escritura (oculto por defecto) -->
+    <div class="chat-typing" id="typingIndicator" style="display:none;">
       <div class="chat-typing__avatar">M</div>
       <div class="chat-typing__bubble">
         <span class="typing-dot"></span>
@@ -111,12 +86,276 @@
   <!-- Input Area -->
   <div class="chat-input-area">
     <div class="chat-input-row">
-      <input class="chat-input" type="text" placeholder="Escribe tu mensaje a Medusa...">
-      <button class="btn-send" aria-label="Enviar">&#8594;</button>
+      <textarea
+        class="chat-input"
+        id="chatInput"
+        placeholder="Escribe tu mensaje a Medusa..."
+        rows="1"
+        onkeydown="manejarTecla(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="btn-send" onclick="enviar()" aria-label="Enviar">&#8594;</button>
     </div>
-    <p class="chat-input-footer">En emergencia llama al 155 &nbsp;·&nbsp; Presiona Enter para enviar</p>
+    <p class="chat-input-footer">En emergencia llama al <strong>155</strong> &nbsp;·&nbsp; Presiona <kbd>Enter</kbd> para enviar</p>
   </div>
 
 </main>
 
+{% endblock %}
+
+{% block extra_js %}
+<style>
+  /* Welcome screen */
+  .welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 24px;
+    flex: 1;
+  }
+  .welcome-avatar {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    font-size: 1.8rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+  }
+  .welcome-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 10px;
+  }
+  .welcome-desc {
+    max-width: 400px;
+    color: #888;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 28px;
+  }
+  .welcome-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    max-width: 480px;
+  }
+  .suggestion-chip {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .suggestion-chip:hover {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  /* Chat messages container needs flex for welcome centering */
+  .chat-messages {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Textarea override */
+  .chat-input {
+    resize: none;
+    overflow-y: hidden;
+    min-height: 42px;
+    max-height: 140px;
+    line-height: 1.5;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  kbd {
+    background: #eee;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.75rem;
+    font-family: monospace;
+  }
+</style>
+
+<script>
+  const CSRF_TOKEN = '{{ csrf_token }}';
+  let primerMensaje = true;
+
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+    return v ? v[2] : null;
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  function manejarTecla(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      enviar();
+    }
+  }
+
+  function usarSugerencia(texto) {
+    const input = document.getElementById('chatInput');
+    input.value = texto;
+    autoResize(input);
+    input.focus();
+    enviar();
+  }
+
+  function nuevaConversacion() {
+    const container = document.getElementById('chatMessages');
+    // Borrar mensajes pero conservar la pantalla de bienvenida y el typing
+    container.innerHTML = `
+      <div id="welcomeScreen" class="welcome-screen">
+        <div class="welcome-avatar">M</div>
+        <h2 class="welcome-title">Hola, soy Medusa</h2>
+        <p class="welcome-desc">
+          Estoy aquí para escucharte y acompañarte. Puedes contarme lo que sientes
+          con confianza — nada de lo que digas te va a perjudicar.
+        </p>
+        <div class="welcome-suggestions">
+          <button class="suggestion-chip" onclick="usarSugerencia('No sé si lo que vivo es violencia')">¿Es esto violencia?</button>
+          <button class="suggestion-chip" onclick="usarSugerencia('Siento miedo en casa y no sé qué hacer')">Siento miedo en casa</button>
+          <button class="suggestion-chip" onclick="usarSugerencia('Quiero saber qué derechos tengo')">¿Qué derechos tengo?</button>
+          <button class="suggestion-chip" onclick="usarSugerencia('Necesito ayuda pero no sé cómo empezar')">No sé cómo empezar</button>
+        </div>
+      </div>
+      <div class="chat-typing" id="typingIndicator" style="display:none;">
+        <div class="chat-typing__avatar">M</div>
+        <div class="chat-typing__bubble">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </div>
+      </div>
+    `;
+    primerMensaje = true;
+    document.getElementById('tituloChat').textContent = 'Medusa — Estoy aquí para escucharte';
+    document.getElementById('chatInput').value = '';
+    document.getElementById('itemSesionActual').textContent = 'Nueva conversación';
+  }
+
+  const AGENTE_LABELS = {
+    'CRISIS':    { texto: '🆘 Agente Crisis',    color: '#cc1a1a' },
+    'LEGAL':     { texto: '⚖️ Agente Legal',     color: '#2563eb' },
+    'EMOCIONAL': { texto: '💜 Agente Emocional', color: '#613f75' },
+  };
+
+  function agregarMensaje(texto, tipo, agente) {
+    // Ocultar bienvenida al primer mensaje
+    if (primerMensaje) {
+      const welcome = document.getElementById('welcomeScreen');
+      if (welcome) welcome.remove();
+      primerMensaje = false;
+    }
+
+    const container = document.getElementById('chatMessages');
+    const typing = document.getElementById('typingIndicator');
+
+    const div = document.createElement('div');
+    div.className = `chat-msg chat-msg--${tipo === 'user' ? 'user' : 'bot'}`;
+
+    if (tipo === 'user') {
+      div.innerHTML = `
+        <span class="chat-msg__sender">Tú</span>
+        <div class="chat-msg__row">
+          <div class="chat-msg__bubble chat-msg__bubble--user">${escapeHtml(texto)}</div>
+        </div>
+      `;
+    } else {
+      const info = agente ? AGENTE_LABELS[agente] : null;
+      const badge = info
+        ? `<span style="font-size:0.7rem;color:${info.color};font-weight:600;letter-spacing:0.04em;">${info.texto}</span>`
+        : '';
+      div.innerHTML = `
+        <span class="chat-msg__sender">Medusa ${badge}</span>
+        <div class="chat-msg__row">
+          <div class="chat-msg__avatar">M</div>
+          <div class="chat-msg__bubble chat-msg__bubble--bot">${escapeHtml(texto)}</div>
+        </div>
+      `;
+    }
+
+    container.insertBefore(div, typing);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function mostrarTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) {
+      t.style.display = 'flex';
+      t.scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  function ocultarTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.style.display = 'none';
+  }
+
+  function escapeHtml(text) {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+  }
+
+  async function enviar() {
+    const input = document.getElementById('chatInput');
+    const mensaje = input.value.trim();
+    if (!mensaje) return;
+
+    // Actualizar título del sidebar con el primer mensaje
+    const item = document.getElementById('itemSesionActual');
+    if (item && item.textContent === 'Nueva conversación') {
+      item.textContent = mensaje.length > 35 ? mensaje.substring(0, 35) + '...' : mensaje;
+      document.getElementById('tituloChat').textContent = mensaje.length > 50 ? mensaje.substring(0, 50) + '...' : mensaje;
+    }
+
+    input.value = '';
+    input.style.height = 'auto';
+    input.disabled = true;
+    document.querySelector('.btn-send').disabled = true;
+
+    agregarMensaje(mensaje, 'user');
+    mostrarTyping();
+
+    const formData = new FormData();
+    formData.append('mensaje', mensaje);
+    formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+
+    try {
+      const res = await fetch('/api/chat/', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-CSRFToken': CSRF_TOKEN },
+      });
+      const data = await res.json();
+      ocultarTyping();
+      agregarMensaje(data.respuesta || 'Sin respuesta del modelo.', 'bot', data.agente);
+    } catch (err) {
+      ocultarTyping();
+      agregarMensaje('No pude conectarme con Medusa. Verifica que Ollama esté corriendo.', 'bot');
+    } finally {
+      input.disabled = false;
+      document.querySelector('.btn-send').disabled = false;
+      input.focus();
+    }
+  }
+</script>
 {% endblock %}
