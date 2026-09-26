@@ -12,7 +12,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import LoginForm, OTPForm, RegistrationForm
-from .models import OTPCode
+from .models import Conversation, Message, OTPCode
 
 
 # ── Directorio de prompts ──────────────────────────────────────────────────────
@@ -231,16 +231,31 @@ def chat_api(request):
         return JsonResponse({'error': 'Método no permitido'}, status=405)
 
     mensaje = request.POST.get('mensaje', '').strip()
+    conv_id = request.POST.get('conv_id', '').strip()
     if not mensaje:
         return JsonResponse({'error': 'Mensaje vacío'}, status=400)
+
+    # Obtener o crear conversación
+    conv = None
+    if conv_id:
+        try:
+            conv = Conversation.objects.get(pk=conv_id, user=request.user)
+        except Conversation.DoesNotExist:
+            pass
+    if conv is None:
+        conv = Conversation.objects.create(user=request.user)
+
+    # Guardar mensaje del usuario
+    Message.objects.create(conversation=conv, role='user', content=mensaje)
 
     # ── Filtro rápido para saludos simples ────────────────────────────────────
     saludos_simples = {'hola', 'buenas', 'ola', 'hi', 'hello', 'buenos dias', 'buenas tardes', 'buenas noches'}
     if mensaje.lower() in saludos_simples:
-        return JsonResponse({
-            'respuesta': '¡Hola! Qué gusto que estés por aquí. ¿Cómo te sientes hoy o de qué te gustaría hablar?',
-            'agente': 'EMOCIONAL'
-        })
+        respuesta = '¡Hola! Qué gusto que estés por aquí. ¿Cómo te sientes hoy o de qué te gustaría hablar?'
+        agente = 'EMOCIONAL'
+        Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=agente)
+        _actualizar_titulo(conv, mensaje)
+        return JsonResponse({'respuesta': respuesta, 'agente': agente, 'conv_id': conv.pk})
 
     # ── Intento 1: orquestar a través de n8n ──────────────────────────────────
     try:
@@ -251,21 +266,53 @@ def chat_api(request):
         )
         if res.status_code == 200:
             data = res.json()
-            return JsonResponse({
-                'respuesta': data.get('respuesta', 'Sin respuesta del agente.'),
-                'agente':    data.get('agente', 'EMOCIONAL'),
-            })
+            respuesta = data.get('respuesta', 'Sin respuesta del agente.')
+            agente = data.get('agente', 'EMOCIONAL')
+            Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=agente)
+            _actualizar_titulo(conv, mensaje)
+            return JsonResponse({'respuesta': respuesta, 'agente': agente, 'conv_id': conv.pk})
     except Exception:
-        pass  # n8n no disponible → fallback directo a Ollama
+        pass
 
-    # ── Fallback: llamada directa a Ollama (si n8n no está corriendo) ─────────
+    # ── Fallback directo ──────────────────────────────────────────────────────
     try:
-        tipo   = _clasificar_mensaje(mensaje)
+        tipo = _clasificar_mensaje(mensaje)
         prompt = _cargar_prompt(AGENTES[tipo]).format(mensaje=mensaje)
-        texto  = _llamar_ollama(prompt)
-        return JsonResponse({'respuesta': texto, 'agente': tipo})
+        respuesta = _llamar_ollama(prompt)
+        Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=tipo)
+        _actualizar_titulo(conv, mensaje)
+        return JsonResponse({'respuesta': respuesta, 'agente': tipo, 'conv_id': conv.pk})
     except Exception as e:
-        return JsonResponse({'respuesta': f'Error al conectar con el modelo: {str(e)}'})
+        return JsonResponse({'respuesta': f'Error al conectar con el modelo: {str(e)}', 'conv_id': conv.pk})
+
+
+def _actualizar_titulo(conv, primer_mensaje):
+    if conv.title == 'Nueva conversación':
+        conv.title = primer_mensaje[:80]
+        conv.save(update_fields=['title', 'updated_at'])
+
+
+@login_required
+def conversaciones_api(request):
+    """Lista las conversaciones del usuario actual."""
+    convs = (
+        Conversation.objects
+        .filter(user=request.user)
+        .values('id', 'title', 'updated_at')[:60]
+    )
+    return JsonResponse({'conversaciones': list(convs)})
+
+
+@login_required
+def conversacion_mensajes_api(request, conv_id):
+    """Devuelve los mensajes de una conversación del usuario."""
+    try:
+        conv = Conversation.objects.get(pk=conv_id, user=request.user)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'error': 'No encontrada'}, status=404)
+    mensajes = list(conv.messages.values('role', 'content', 'agente'))
+    return JsonResponse({'mensajes': mensajes, 'titulo': conv.title})
+
 
 @csrf_exempt
 def clasificar_api(request):

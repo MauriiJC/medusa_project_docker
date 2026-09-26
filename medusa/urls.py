@@ -13,4 +13,6 @@ urlpatterns = [
     path('api/chat/', views.chat_api, name='chat_api'),
     path('api/agente/', views.agente_api, name='agente_api'),
     path('api/clasificar/', views.clasificar_api, name='clasificar_api'),
+    path('api/conversaciones/', views.conversaciones_api, name='conversaciones_api'),
+    path('api/conversaciones/<int:conv_id>/', views.conversacion_mensajes_api, name='conversacion_mensajes_api'),
 ]

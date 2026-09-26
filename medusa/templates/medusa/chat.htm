@@ -192,6 +192,8 @@
 
 <script>
   const CSRF_TOKEN = '{{ csrf_token }}';
+  let currentConvId = null;
+  let primerMensaje = true;
 
   function toggleSidebar() {
     document.querySelector('.sidebar').classList.toggle('sidebar--open');
@@ -201,7 +203,60 @@
     document.querySelector('.sidebar').classList.remove('sidebar--open');
     document.getElementById('sidebarOverlay').classList.remove('sidebar-overlay--visible');
   }
-  let primerMensaje = true;
+
+  /* ── Cargar lista de conversaciones ── */
+  async function cargarConversaciones() {
+    try {
+      const res = await fetch('/api/conversaciones/');
+      const data = await res.json();
+      const hist = document.getElementById('historialChats');
+      hist.innerHTML = '<div class="sidebar__section-label">Conversaciones</div>';
+
+      // Botón sesión actual siempre primero
+      const btnNueva = document.createElement('div');
+      btnNueva.className = 'chat-item chat-item--active';
+      btnNueva.id = 'itemSesionActual';
+      btnNueva.textContent = 'Nueva conversación';
+      btnNueva.onclick = () => { nuevaConversacion(); cerrarSidebar(); };
+      hist.appendChild(btnNueva);
+
+      data.conversaciones.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'chat-item';
+        item.textContent = c.title.length > 38 ? c.title.substring(0, 38) + '…' : c.title;
+        item.dataset.convId = c.id;
+        item.onclick = () => { cargarConversacion(c.id, c.title); cerrarSidebar(); };
+        hist.appendChild(item);
+      });
+    } catch (_) {}
+  }
+
+  /* ── Cargar mensajes de una conversación ── */
+  async function cargarConversacion(convId, titulo) {
+    try {
+      const res = await fetch(`/api/conversaciones/${convId}/`);
+      const data = await res.json();
+
+      currentConvId = convId;
+      primerMensaje = false;
+
+      const container = document.getElementById('chatMessages');
+      const typing = document.getElementById('typingIndicator');
+      container.innerHTML = '';
+      container.appendChild(typing);
+      typing.style.display = 'none';
+
+      // Marcar activo en sidebar
+      document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('chat-item--active'));
+      const activo = document.querySelector(`[data-conv-id="${convId}"]`);
+      if (activo) activo.classList.add('chat-item--active');
+
+      document.getElementById('tituloChat').textContent = titulo;
+
+      data.mensajes.forEach(m => agregarMensaje(m.content, m.role, m.agente, false));
+      container.scrollTop = container.scrollHeight;
+    } catch (_) {}
+  }
 
   function getCookie(name) {
     const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
@@ -229,8 +284,15 @@
   }
 
   function nuevaConversacion() {
+    currentConvId = null;
+    primerMensaje = true;
+    document.getElementById('tituloChat').textContent = 'Medusa — Estoy aquí para escucharte';
+    document.getElementById('chatInput').value = '';
+    document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('chat-item--active'));
+    const btnNueva = document.getElementById('itemSesionActual');
+    if (btnNueva) btnNueva.classList.add('chat-item--active');
+
     const container = document.getElementById('chatMessages');
-    // Borrar mensajes pero conservar la pantalla de bienvenida y el typing
     container.innerHTML = `
       <div id="welcomeScreen" class="welcome-screen">
         <div class="welcome-avatar">M</div>
@@ -249,16 +311,10 @@
       <div class="chat-typing" id="typingIndicator" style="display:none;">
         <div class="chat-typing__avatar">M</div>
         <div class="chat-typing__bubble">
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
-          <span class="typing-dot"></span>
+          <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
         </div>
       </div>
     `;
-    primerMensaje = true;
-    document.getElementById('tituloChat').textContent = 'Medusa — Estoy aquí para escucharte';
-    document.getElementById('chatInput').value = '';
-    document.getElementById('itemSesionActual').textContent = 'Nueva conversación';
   }
 
   const AGENTE_LABELS = {
@@ -267,8 +323,7 @@
     'EMOCIONAL': { texto: '💜 Agente Emocional', color: '#613f75' },
   };
 
-  function agregarMensaje(texto, tipo, agente) {
-    // Ocultar bienvenida al primer mensaje
+  function agregarMensaje(texto, tipo, agente, scroll = true) {
     if (primerMensaje) {
       const welcome = document.getElementById('welcomeScreen');
       if (welcome) welcome.remove();
@@ -303,7 +358,7 @@
     }
 
     container.insertBefore(div, typing);
-    container.scrollTop = container.scrollHeight;
+    if (scroll) container.scrollTop = container.scrollHeight;
   }
 
   function mostrarTyping() {
@@ -332,13 +387,6 @@
     const mensaje = input.value.trim();
     if (!mensaje) return;
 
-    // Actualizar título del sidebar con el primer mensaje
-    const item = document.getElementById('itemSesionActual');
-    if (item && item.textContent === 'Nueva conversación') {
-      item.textContent = mensaje.length > 35 ? mensaje.substring(0, 35) + '...' : mensaje;
-      document.getElementById('tituloChat').textContent = mensaje.length > 50 ? mensaje.substring(0, 50) + '...' : mensaje;
-    }
-
     input.value = '';
     input.style.height = 'auto';
     input.disabled = true;
@@ -350,6 +398,7 @@
     const formData = new FormData();
     formData.append('mensaje', mensaje);
     formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+    if (currentConvId) formData.append('conv_id', currentConvId);
 
     try {
       const res = await fetch('/api/chat/', {
@@ -360,14 +409,29 @@
       const data = await res.json();
       ocultarTyping();
       agregarMensaje(data.respuesta || 'Sin respuesta del modelo.', 'bot', data.agente);
+
+      // Actualizar conv_id y sidebar
+      if (data.conv_id && data.conv_id !== currentConvId) {
+        currentConvId = data.conv_id;
+        await cargarConversaciones();
+        // Marcar la conversación activa
+        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('chat-item--active'));
+        const activo = document.querySelector(`[data-conv-id="${currentConvId}"]`);
+        if (activo) activo.classList.add('chat-item--active');
+      }
+      document.getElementById('tituloChat').textContent =
+        mensaje.length > 50 ? mensaje.substring(0, 50) + '…' : mensaje;
     } catch (err) {
       ocultarTyping();
-      agregarMensaje('No pude conectarme con Medusa. Verifica que Ollama esté corriendo.', 'bot');
+      agregarMensaje('No pude conectarme con Medusa. Intenta de nuevo.', 'bot');
     } finally {
       input.disabled = false;
       document.querySelector('.btn-send').disabled = false;
       input.focus();
     }
   }
+
+  // Cargar conversaciones al abrir el chat
+  cargarConversaciones();
 </script>
 {% endblock %}
