@@ -340,25 +340,28 @@ def agente_api(request):
 
 def _send_otp_email(user, code):
     nombre = user.first_name or 'usuaria'
-    resend_key = os.environ.get('RESEND_API_KEY', '')
-    if not resend_key:
+    brevo_key = os.environ.get('BREVO_API_KEY', '')
+    if not brevo_key:
         return False
     try:
-        import resend as resend_sdk
-        resend_sdk.api_key = resend_key
-        from_email = os.environ.get('RESEND_FROM', 'Medusa <onboarding@resend.dev>')
-        resend_sdk.Emails.send({
-            'from': from_email,
-            'to': [user.email],
-            'subject': 'Tu código de verificación — Medusa',
-            'text': (
-                f'Hola {nombre},\n\n'
-                f'Tu código de verificación es: {code}\n\n'
-                f'Este código es válido por 10 minutos.\n'
-                f'Si no fuiste tú quien inició sesión, ignora este mensaje.\n\n'
-                f'— Medusa · SOS Mujer Berraca'
-            ),
-        })
-        return True
+        sender_email = os.environ.get('BREVO_SENDER_EMAIL', 'medusaingesis@gmail.com')
+        resp = http_requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': brevo_key, 'Content-Type': 'application/json'},
+            json={
+                'sender': {'name': 'Medusa · SOS Mujer Berraca', 'email': sender_email},
+                'to': [{'email': user.email, 'name': nombre}],
+                'subject': 'Tu código de verificación — Medusa',
+                'textContent': (
+                    f'Hola {nombre},\n\n'
+                    f'Tu código de verificación es: {code}\n\n'
+                    f'Este código es válido por 10 minutos.\n'
+                    f'Si no fuiste tú quien inició sesión, ignora este mensaje.\n\n'
+                    f'— Medusa · SOS Mujer Berraca'
+                ),
+            },
+            timeout=15,
+        )
+        return resp.status_code in (200, 201)
     except Exception:
         return False
