@@ -32,12 +32,15 @@
   </div>
 </aside>
 
+<!-- Overlay para cerrar sidebar en móvil -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="cerrarSidebar()"></div>
+
 <!-- ══ CHAT MAIN ══ -->
 <main class="chat-main">
 
   <!-- Topbar -->
   <div class="chat-topbar">
-    <div class="chat-topbar__hamburger" aria-label="Menú">
+    <div class="chat-topbar__hamburger" aria-label="Menú" onclick="toggleSidebar()">
       <span></span><span></span><span></span>
     </div>
     <h1 class="chat-topbar__title" id="tituloChat">Medusa — Estoy aquí para escucharte</h1>
@@ -189,6 +192,15 @@
 
 <script>
   const CSRF_TOKEN = '{{ csrf_token }}';
+
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('sidebar--open');
+    document.getElementById('sidebarOverlay').classList.toggle('sidebar-overlay--visible');
+  }
+  function cerrarSidebar() {
+    document.querySelector('.sidebar').classList.remove('sidebar--open');
+    document.getElementById('sidebarOverlay').classList.remove('sidebar-overlay--visible');
+  }
   let primerMensaje = true;
 
   function getCookie(name) {
