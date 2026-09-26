@@ -336,9 +336,7 @@ def agente_api(request):
 def _send_otp_email(user, code):
     nombre = user.first_name or 'usuaria'
     brevo_key = os.environ.get('BREVO_API_KEY', '')
-    print(f'[OTP] key presente={bool(brevo_key)} destino={user.email}', flush=True)
     if not brevo_key:
-        print('[OTP] Sin BREVO_API_KEY', flush=True)
         return False
     try:
         sender_email = os.environ.get('BREVO_SENDER_EMAIL', 'medusaingesis@gmail.com')
@@ -359,8 +357,6 @@ def _send_otp_email(user, code):
             },
             timeout=15,
         )
-        print(f'[OTP] Brevo status={resp.status_code} body={resp.text[:200]}', flush=True)
         return resp.status_code in (200, 201)
-    except Exception as e:
-        print(f'[OTP] Error={e}', flush=True)
+    except Exception:
         return False
