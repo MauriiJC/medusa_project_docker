@@ -7,16 +7,16 @@
 {% block content %}
 
 <!-- ══ SIDEBAR ══ -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar__header">
-    <button class="btn-new-chat" onclick="nuevaConversacion()">+ Nueva conversación</button>
+    <button type="button" class="btn-new-chat" onclick="nuevaConversacion(); cerrarSidebar();">+ Nueva conversación</button>
   </div>
 
-  <input class="sidebar__search" type="text" placeholder="🔍 Buscar chats...">
+  <input class="sidebar__search" id="buscarChats" type="search" placeholder="🔍 Buscar chats..." oninput="filtrarConversaciones()">
 
   <div class="sidebar__history" id="historialChats">
     <div class="sidebar__section-label">Sesión actual</div>
-    <div class="chat-item chat-item--active" id="itemSesionActual">Nueva conversación</div>
+    <div class="chat-item chat-item--active" id="itemSesionActual" onclick="nuevaConversacion(); cerrarSidebar();">Nueva conversación</div>
   </div>
 
   <div class="sidebar__footer">
@@ -40,9 +40,9 @@
 
   <!-- Topbar -->
   <div class="chat-topbar">
-    <div class="chat-topbar__hamburger" aria-label="Menú" onclick="toggleSidebar()">
+    <button type="button" class="chat-topbar__hamburger" aria-label="Mostrar u ocultar conversaciones" onclick="toggleSidebar()">
       <span></span><span></span><span></span>
-    </div>
+    </button>
     <h1 class="chat-topbar__title" id="tituloChat">Medusa — Estoy aquí para escucharte</h1>
     <a href="tel:155" class="emergency-pill">🆘 Línea 155</a>
   </div>
@@ -97,9 +97,9 @@
         onkeydown="manejarTecla(event)"
         oninput="autoResize(this)"
       ></textarea>
-      <button class="btn-send" onclick="enviar()" aria-label="Enviar">&#8594;</button>
+      <button type="button" class="btn-send" onclick="enviar()" aria-label="Enviar">&#8594;</button>
     </div>
-    <p class="chat-input-footer">En emergencia llama al <strong>155</strong> &nbsp;·&nbsp; Presiona <kbd>Enter</kbd> para enviar</p>
+    <p class="chat-input-footer">En emergencia llama al <a href="tel:155"><strong>155</strong></a><span class="hint-enter"> &nbsp;·&nbsp; Presiona <kbd>Enter</kbd> para enviar</span></p>
   </div>
 
 </main>
@@ -121,7 +121,7 @@
   .welcome-avatar {
     width: 64px; height: 64px;
     border-radius: 50%;
-    background: var(--primary);
+    background: var(--purple);
     color: #fff;
     font-size: 1.8rem;
     font-weight: 700;
@@ -131,7 +131,7 @@
   .welcome-title {
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--primary);
+    color: var(--purple);
     margin-bottom: 10px;
   }
   .welcome-desc {
@@ -150,8 +150,8 @@
   }
   .suggestion-chip {
     background: none;
-    border: 1px solid var(--primary);
-    color: var(--primary);
+    border: 1px solid var(--purple);
+    color: var(--purple);
     border-radius: 20px;
     padding: 8px 18px;
     font-size: 0.84rem;
@@ -159,7 +159,7 @@
     transition: all 0.15s;
   }
   .suggestion-chip:hover {
-    background: var(--primary);
+    background: var(--purple);
     color: #fff;
   }
 
@@ -194,14 +194,48 @@
   const CSRF_TOKEN = '{{ csrf_token }}';
   let currentConvId = null;
   let primerMensaje = true;
+  let enviando = false;
+
+  const esMovil = () => window.matchMedia('(max-width: 768px)').matches;
 
   function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('sidebar--open');
-    document.getElementById('sidebarOverlay').classList.toggle('sidebar-overlay--visible');
+    const sidebar = document.getElementById('sidebar');
+    if (esMovil()) {
+      sidebar.classList.toggle('sidebar--open');
+      document.getElementById('sidebarOverlay').classList.toggle('sidebar-overlay--visible');
+    } else {
+      sidebar.classList.toggle('sidebar--collapsed');
+    }
   }
   function cerrarSidebar() {
-    document.querySelector('.sidebar').classList.remove('sidebar--open');
+    document.getElementById('sidebar').classList.remove('sidebar--open');
     document.getElementById('sidebarOverlay').classList.remove('sidebar-overlay--visible');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarSidebar(); });
+  // Si se agranda la pantalla con el panel abierto, se limpia el estado móvil
+  window.matchMedia('(max-width: 768px)').addEventListener('change', cerrarSidebar);
+
+  /* ── Buscar en el historial ── */
+  function filtrarConversaciones() {
+    const q = document.getElementById('buscarChats').value.trim().toLowerCase();
+    let visibles = 0;
+    document.querySelectorAll('.chat-item[data-conv-id]').forEach(el => {
+      const coincide = el.textContent.toLowerCase().includes(q);
+      el.style.display = coincide ? '' : 'none';
+      if (coincide) visibles++;
+    });
+    let vacio = document.getElementById('sinResultados');
+    if (q && visibles === 0) {
+      if (!vacio) {
+        vacio = document.createElement('div');
+        vacio.id = 'sinResultados';
+        vacio.className = 'sidebar__empty';
+        vacio.textContent = 'No hay conversaciones con ese texto.';
+        document.getElementById('historialChats').appendChild(vacio);
+      }
+    } else if (vacio) {
+      vacio.remove();
+    }
   }
 
   /* ── Cargar lista de conversaciones ── */
@@ -224,17 +258,25 @@
         const item = document.createElement('div');
         item.className = 'chat-item';
         item.textContent = c.title.length > 38 ? c.title.substring(0, 38) + '…' : c.title;
+        item.title = c.title;
         item.dataset.convId = c.id;
+        if (c.id === currentConvId) {
+          btnNueva.classList.remove('chat-item--active');
+          item.classList.add('chat-item--active');
+        }
         item.onclick = () => { cargarConversacion(c.id, c.title); cerrarSidebar(); };
         hist.appendChild(item);
       });
+      filtrarConversaciones();
     } catch (_) {}
   }
 
   /* ── Cargar mensajes de una conversación ── */
   async function cargarConversacion(convId, titulo) {
+    if (enviando) return; // no cambiar de chat mientras Medusa responde
     try {
       const res = await fetch(`/api/conversaciones/${convId}/`);
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
 
       currentConvId = convId;
@@ -276,6 +318,7 @@
   }
 
   function usarSugerencia(texto) {
+    if (enviando) return;
     const input = document.getElementById('chatInput');
     input.value = texto;
     autoResize(input);
@@ -284,10 +327,13 @@
   }
 
   function nuevaConversacion() {
+    if (enviando) return;
     currentConvId = null;
     primerMensaje = true;
     document.getElementById('tituloChat').textContent = 'Medusa — Estoy aquí para escucharte';
-    document.getElementById('chatInput').value = '';
+    const input = document.getElementById('chatInput');
+    input.value = '';
+    autoResize(input);
     document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('chat-item--active'));
     const btnNueva = document.getElementById('itemSesionActual');
     if (btnNueva) btnNueva.classList.add('chat-item--active');
@@ -385,8 +431,10 @@
   async function enviar() {
     const input = document.getElementById('chatInput');
     const mensaje = input.value.trim();
-    if (!mensaje) return;
+    if (!mensaje || enviando) return;
 
+    enviando = true;
+    const eraNueva = !currentConvId;
     input.value = '';
     input.style.height = 'auto';
     input.disabled = true;
@@ -406,6 +454,12 @@
         body: formData,
         headers: { 'X-CSRFToken': CSRF_TOKEN },
       });
+      // Si la sesión expiró, Django redirige al login
+      if (res.redirected && res.url.includes('/login')) {
+        window.location.href = res.url;
+        return;
+      }
+      if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       ocultarTyping();
       agregarMensaje(data.respuesta || 'Sin respuesta del modelo.', 'bot', data.agente);
@@ -419,12 +473,16 @@
         const activo = document.querySelector(`[data-conv-id="${currentConvId}"]`);
         if (activo) activo.classList.add('chat-item--active');
       }
-      document.getElementById('tituloChat').textContent =
-        mensaje.length > 50 ? mensaje.substring(0, 50) + '…' : mensaje;
+      // El título es el primer mensaje de la conversación
+      if (eraNueva) {
+        document.getElementById('tituloChat').textContent =
+          mensaje.length > 50 ? mensaje.substring(0, 50) + '…' : mensaje;
+      }
     } catch (err) {
       ocultarTyping();
       agregarMensaje('No pude conectarme con Medusa. Intenta de nuevo.', 'bot');
     } finally {
+      enviando = false;
       input.disabled = false;
       document.querySelector('.btn-send').disabled = false;
       input.focus();
