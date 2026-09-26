@@ -26,12 +26,41 @@ def _cargar_prompt(nombre_archivo):
         return f.read()
 
 
-# ── Llamada base a Ollama ──────────────────────────────────────────────────────
-OLLAMA_URL = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
+# ── Llamada al modelo de lenguaje ─────────────────────────────────────────────
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'llama-3.1-8b-instant')
+OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
 
 
 def _llamar_ollama(prompt, num_predict=180, num_ctx=2048):
-    """Envía un prompt a Ollama y devuelve el texto de la respuesta."""
+    """Llama a Groq si hay API key configurada; si no, usa Ollama como fallback."""
+    if GROQ_API_KEY:
+        return _llamar_groq(prompt)
+    return _llamar_ollama_directo(prompt, num_predict, num_ctx)
+
+
+def _llamar_groq(prompt):
+    """Llama a la API de Groq (rápida y gratuita)."""
+    respuesta = http_requests.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        headers={
+            'Authorization': f'Bearer {GROQ_API_KEY}',
+            'Content-Type': 'application/json',
+        },
+        json={
+            'model': GROQ_MODEL,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.7,
+            'max_tokens': 400,
+        },
+        timeout=30,
+    )
+    respuesta.raise_for_status()
+    return respuesta.json()['choices'][0]['message']['content'].strip()
+
+
+def _llamar_ollama_directo(prompt, num_predict=180, num_ctx=2048):
+    """Fallback: llama directamente a Ollama si no hay GROQ_API_KEY."""
     respuesta = http_requests.post(
         OLLAMA_URL,
         json={
