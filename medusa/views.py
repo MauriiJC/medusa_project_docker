@@ -28,7 +28,7 @@ def _cargar_prompt(nombre_archivo):
 
 # ── Llamada al modelo de lenguaje ─────────────────────────────────────────────
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'gemma2-9b-it')
+GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
 OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
 
 
@@ -41,12 +41,10 @@ def _llamar_ollama(prompt, num_predict=180, num_ctx=2048):
 
 def _llamar_groq(prompt):
     """Llama a la API de Groq (rápida y gratuita)."""
-    key = GROQ_API_KEY.strip()
-    print(f'[GROQ] modelo={GROQ_MODEL} key_len={len(key)}', flush=True)
     respuesta = http_requests.post(
         'https://api.groq.com/openai/v1/chat/completions',
         headers={
-            'Authorization': f'Bearer {key}',
+            'Authorization': f'Bearer {GROQ_API_KEY.strip()}',
             'Content-Type': 'application/json',
         },
         json={
@@ -57,7 +55,6 @@ def _llamar_groq(prompt):
         },
         timeout=30,
     )
-    print(f'[GROQ] status={respuesta.status_code} body={respuesta.text[:300]}', flush=True)
     respuesta.raise_for_status()
     return respuesta.json()['choices'][0]['message']['content'].strip()
 
