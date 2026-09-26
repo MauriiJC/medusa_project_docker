@@ -28,7 +28,7 @@ def _cargar_prompt(nombre_archivo):
 
 # ── Llamada al modelo de lenguaje ─────────────────────────────────────────────
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'mixtral-8x7b-32768')
+GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'llama3-8b-8192')
 OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
 
 
