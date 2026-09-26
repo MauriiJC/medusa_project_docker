@@ -1,5 +1,4 @@
-import random
-import string
+import secrets
 from datetime import timedelta
 
 from django.contrib.auth.models import User
@@ -22,7 +21,7 @@ class OTPCode(models.Model):
     @classmethod
     def generate_for(cls, user):
         cls.objects.filter(user=user, is_used=False).update(is_used=True)
-        code = ''.join(random.choices(string.digits, k=6))
+        code = ''.join(secrets.choice('0123456789') for _ in range(6))
         return cls.objects.create(user=user, code=code)
 
 

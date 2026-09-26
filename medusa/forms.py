@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 
@@ -15,6 +16,15 @@ class RegistrationForm(forms.Form):
         if User.objects.filter(email=email).exists():
             raise ValidationError('Este correo ya está registrado.')
         return email
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                raise ValidationError(list(e.messages))
+        return password
 
     def clean(self):
         cleaned_data = super().clean()

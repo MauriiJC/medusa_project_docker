@@ -10,6 +10,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar__header">
     <button type="button" class="btn-new-chat" onclick="nuevaConversacion(); cerrarSidebar();">+ Nueva conversación</button>
+    <button class="btn-clear-history" onclick="confirmarBorrarTodo()" title="Borrar todo el historial">🗑️</button>
   </div>
 
   <input class="sidebar__search" id="buscarChats" type="search" placeholder="🔍 Buscar chats..." oninput="filtrarConversaciones()">
@@ -104,6 +105,18 @@
 
 </main>
 
+<!-- Modal de confirmación de borrado -->
+<div class="confirm-modal-overlay" id="confirmModal">
+  <div class="confirm-modal">
+    <h3 id="confirmTitle">¿Borrar esta conversación?</h3>
+    <p id="confirmDesc">Esta acción no se puede deshacer.</p>
+    <div class="confirm-modal__btns">
+      <button class="btn-confirm-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-confirm-delete" id="confirmBtn">Borrar</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -168,6 +181,71 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* Botón borrar todo historial */
+  .btn-clear-history {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0.5;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: opacity 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-clear-history:hover { opacity: 1; background: rgba(204,26,26,0.08); }
+
+  /* Botón eliminar por conversación */
+  .chat-item {
+    position: relative;
+  }
+  .chat-item__del {
+    display: none;
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #cc1a1a;
+    padding: 2px 5px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .chat-item:hover .chat-item__del { display: block; }
+
+  /* Modal de confirmación */
+  .confirm-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(45,27,61,0.55);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .confirm-modal-overlay.active { display: flex; }
+  .confirm-modal {
+    background: var(--white, #fff);
+    border-radius: 14px;
+    padding: 28px 28px 22px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(45,27,61,0.2);
+  }
+  .confirm-modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: #2D1B3D; }
+  .confirm-modal p  { font-size: 0.875rem; color: #887799; margin-bottom: 20px; }
+  .confirm-modal__btns { display: flex; gap: 10px; justify-content: center; }
+  .confirm-modal__btns button {
+    padding: 8px 20px; border-radius: 8px; border: none; font-weight: 600;
+    cursor: pointer; font-size: 0.875rem;
+  }
+  .btn-confirm-cancel { background: #f0eaf5; color: #613F75; }
+  .btn-confirm-delete { background: #cc1a1a; color: #fff; }
 
   /* Textarea override */
   .chat-input {
@@ -257,14 +335,15 @@
       data.conversaciones.forEach(c => {
         const item = document.createElement('div');
         item.className = 'chat-item';
-        item.textContent = c.title.length > 38 ? c.title.substring(0, 38) + '…' : c.title;
-        item.title = c.title;
         item.dataset.convId = c.id;
         if (c.id === currentConvId) {
           btnNueva.classList.remove('chat-item--active');
           item.classList.add('chat-item--active');
         }
-        item.onclick = () => { cargarConversacion(c.id, c.title); cerrarSidebar(); };
+        const titulo = c.title.length > 34 ? c.title.substring(0, 34) + '…' : c.title;
+        item.innerHTML = `<span title="${c.title}">${titulo}</span><button class="chat-item__del" title="Borrar">✕</button>`;
+        item.querySelector('span').onclick = () => { cargarConversacion(c.id, c.title); cerrarSidebar(); };
+        item.querySelector('.chat-item__del').addEventListener('click', (e) => borrarConversacion(c.id, e));
         hist.appendChild(item);
       });
       filtrarConversaciones();
@@ -487,6 +566,61 @@
       document.querySelector('.btn-send').disabled = false;
       input.focus();
     }
+  }
+
+  /* ── Modal de confirmación ── */
+  let _modalCallback = null;
+
+  function abrirModal(titulo, desc, onConfirm) {
+    document.getElementById('confirmTitle').textContent = titulo;
+    document.getElementById('confirmDesc').textContent  = desc;
+    _modalCallback = onConfirm;
+    document.getElementById('confirmBtn').onclick = () => { cerrarModal(); onConfirm(); };
+    document.getElementById('confirmModal').classList.add('active');
+  }
+  function cerrarModal() {
+    document.getElementById('confirmModal').classList.remove('active');
+    _modalCallback = null;
+  }
+  document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
+  });
+
+  /* ── Borrar una conversación ── */
+  async function borrarConversacion(convId, event) {
+    event.stopPropagation();
+    abrirModal(
+      '¿Borrar esta conversación?',
+      'Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          await fetch(`/api/conversaciones/${convId}/eliminar/`, {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+          });
+          if (currentConvId === convId) nuevaConversacion();
+          await cargarConversaciones();
+        } catch (_) {}
+      }
+    );
+  }
+
+  /* ── Borrar todo el historial ── */
+  function confirmarBorrarTodo() {
+    abrirModal(
+      '¿Borrar todo el historial?',
+      'Se eliminarán todas tus conversaciones. Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          await fetch('/api/historial/eliminar/', {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+          });
+          nuevaConversacion();
+          await cargarConversaciones();
+        } catch (_) {}
+      }
+    );
   }
 
   // Cargar conversaciones al abrir el chat

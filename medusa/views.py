@@ -6,10 +6,10 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from .forms import LoginForm, OTPForm, RegistrationForm
 from .models import Conversation, Message, OTPCode
@@ -20,38 +20,30 @@ PROMPTS_DIR = os.path.join(os.path.dirname(__file__), 'prompts')
 
 
 def _cargar_prompt(nombre_archivo):
-    """Carga un prompt desde el archivo .txt correspondiente."""
     ruta = os.path.join(PROMPTS_DIR, nombre_archivo)
     with open(ruta, encoding='utf-8') as f:
         return f.read()
 
 
-# ── Llamada al modelo de lenguaje ─────────────────────────────────────────────
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL   = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
-OLLAMA_URL   = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
+# ── Configuración LLM ─────────────────────────────────────────────────────────
+GROQ_API_KEY    = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL      = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+OLLAMA_URL      = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
+N8N_WEBHOOK_URL = os.environ.get('N8N_WEBHOOK_URL', '')
+N8N_TOKEN       = os.environ.get('N8N_TOKEN', '')
 
 
-def _llamar_ollama(prompt, num_predict=180, num_ctx=2048):
-    """Llama a Groq si hay API key configurada; si no, usa Ollama como fallback."""
-    if GROQ_API_KEY:
-        return _llamar_groq(prompt)
-    return _llamar_ollama_directo(prompt, num_predict, num_ctx)
-
-
+# ── Llamadas al modelo ────────────────────────────────────────────────────────
 def _llamar_groq(prompt):
-    """Llama a la API de Groq (rápida y gratuita)."""
+    """Llamada simple de un solo turno (usada para clasificación)."""
     respuesta = http_requests.post(
         'https://api.groq.com/openai/v1/chat/completions',
-        headers={
-            'Authorization': f'Bearer {GROQ_API_KEY.strip()}',
-            'Content-Type': 'application/json',
-        },
+        headers={'Authorization': f'Bearer {GROQ_API_KEY.strip()}', 'Content-Type': 'application/json'},
         json={
             'model': GROQ_MODEL,
             'messages': [{'role': 'user', 'content': prompt}],
             'temperature': 0.7,
-            'max_tokens': 400,
+            'max_tokens': 800,
         },
         timeout=30,
     )
@@ -59,8 +51,30 @@ def _llamar_groq(prompt):
     return respuesta.json()['choices'][0]['message']['content'].strip()
 
 
-def _llamar_ollama_directo(prompt, num_predict=180, num_ctx=2048):
-    """Fallback: llama directamente a Ollama si no hay GROQ_API_KEY."""
+def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
+    """Llamada multi-turno con historial de conversación."""
+    msgs = [{'role': 'system', 'content': system_instructions}]
+    for m in historial:
+        role = 'user' if m['role'] == 'user' else 'assistant'
+        msgs.append({'role': role, 'content': m['content']})
+    msgs.append({'role': 'user', 'content': nuevo_mensaje})
+    respuesta = http_requests.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        headers={'Authorization': f'Bearer {GROQ_API_KEY.strip()}', 'Content-Type': 'application/json'},
+        json={
+            'model': GROQ_MODEL,
+            'messages': msgs,
+            'temperature': 0.7,
+            'max_tokens': 800,
+        },
+        timeout=30,
+    )
+    respuesta.raise_for_status()
+    return respuesta.json()['choices'][0]['message']['content'].strip()
+
+
+def _llamar_ollama_directo(prompt, num_predict=400, num_ctx=2048):
+    """Fallback a Ollama cuando no hay GROQ_API_KEY."""
     respuesta = http_requests.post(
         OLLAMA_URL,
         json={
@@ -81,22 +95,31 @@ def _llamar_ollama_directo(prompt, num_predict=180, num_ctx=2048):
     return respuesta.json().get('response', '').strip()
 
 
+def _llamar_ollama(prompt, num_predict=180, num_ctx=512):
+    """Enruta a Groq si hay API key, sino a Ollama (usado para clasificación)."""
+    if GROQ_API_KEY:
+        return _llamar_groq(prompt)
+    return _llamar_ollama_directo(prompt, num_predict, num_ctx)
+
+
+def _llamar_con_contexto(system_instructions, historial, nuevo_mensaje):
+    """Enruta a Groq con historial si hay API key, sino fallback a Ollama sin historial."""
+    if GROQ_API_KEY:
+        return _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje)
+    prompt_fallback = f"{system_instructions}\n\nLa usuaria dice: {nuevo_mensaje}"
+    return _llamar_ollama_directo(prompt_fallback)
+
+
 # ── Clasificador ───────────────────────────────────────────────────────────────
 def _clasificar_mensaje(mensaje):
-    """
-    Llama al agente clasificador y devuelve 'CRISIS', 'LEGAL' o 'EMOCIONAL'.
-    Usa contexto mínimo para ser rápido — solo necesita responder una palabra.
-    """
     prompt = _cargar_prompt('clasificador.txt').format(mensaje=mensaje)
     resultado = _llamar_ollama(prompt, num_predict=5, num_ctx=512)
-    # Normalizar — tomar solo la primera palabra en mayúsculas
     palabra = resultado.strip().upper().split()[0] if resultado.strip() else ''
     if palabra in ('CRISIS', 'LEGAL', 'EMOCIONAL'):
         return palabra
-    return 'EMOCIONAL'  # fallback seguro
+    return 'EMOCIONAL'
 
 
-# ── Mapa de agentes ────────────────────────────────────────────────────────────
 AGENTES = {
     'CRISIS':    'agente_crisis.txt',
     'LEGAL':     'agente_legal.txt',
@@ -104,6 +127,7 @@ AGENTES = {
 }
 
 
+# ── Vistas públicas ───────────────────────────────────────────────────────────
 def landing(request):
     return render(request, 'medusa/landing.htm')
 
@@ -143,15 +167,15 @@ def login_view(request):
     form = LoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         cd = form.cleaned_data
+        # Mensaje genérico para no revelar si el correo existe
         try:
             db_user = User.objects.get(email=cd['email'].lower())
+            user = authenticate(request, username=db_user.username, password=cd['password'])
         except User.DoesNotExist:
-            form.add_error('email', 'No existe una cuenta con este correo.')
-            return render(request, 'medusa/login.htm', {'form': form})
+            user = None
 
-        user = authenticate(request, username=db_user.username, password=cd['password'])
         if user is None:
-            form.add_error('password', 'Contraseña incorrecta.')
+            messages.error(request, 'Correo o contraseña incorrectos.')
             return render(request, 'medusa/login.htm', {'form': form})
 
         # OTP deshabilitado temporalmente para pruebas
@@ -219,6 +243,7 @@ def logout_view(request):
     return redirect('landing')
 
 
+# ── Chat ──────────────────────────────────────────────────────────────────────
 @login_required
 def chat(request):
     return render(request, 'medusa/chat.htm', {'user': request.user})
@@ -245,6 +270,11 @@ def chat_api(request):
     if conv is None:
         conv = Conversation.objects.create(user=request.user)
 
+    # Capturar historial ANTES de guardar el mensaje actual
+    historial = list(
+        conv.messages.order_by('-created_at')[:10]
+    )[::-1]
+
     # Guardar mensaje del usuario
     Message.objects.create(conversation=conv, role='user', content=mensaje)
 
@@ -257,33 +287,43 @@ def chat_api(request):
         _actualizar_titulo(conv, mensaje)
         return JsonResponse({'respuesta': respuesta, 'agente': agente, 'conv_id': conv.pk})
 
-    # ── Intento 1: orquestar a través de n8n ──────────────────────────────────
-    try:
-        res = http_requests.post(
-            'http://localhost:5678/webhook/medusa',
-            json={'mensaje': mensaje},
-            timeout=120,
-        )
-        if res.status_code == 200:
-            data = res.json()
-            respuesta = data.get('respuesta', 'Sin respuesta del agente.')
-            agente = data.get('agente', 'EMOCIONAL')
-            Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=agente)
-            _actualizar_titulo(conv, mensaje)
-            return JsonResponse({'respuesta': respuesta, 'agente': agente, 'conv_id': conv.pk})
-    except Exception:
-        pass
+    # ── Intento 1: orquestar a través de n8n (si está configurado) ─────────────
+    if N8N_WEBHOOK_URL:
+        try:
+            res = http_requests.post(
+                N8N_WEBHOOK_URL,
+                json={'mensaje': mensaje},
+                timeout=10,
+            )
+            if res.status_code == 200:
+                data = res.json()
+                respuesta = data.get('respuesta', 'Sin respuesta del agente.')
+                agente = data.get('agente', 'EMOCIONAL')
+                Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=agente)
+                _actualizar_titulo(conv, mensaje)
+                return JsonResponse({'respuesta': respuesta, 'agente': agente, 'conv_id': conv.pk})
+        except Exception:
+            pass
 
-    # ── Fallback directo ──────────────────────────────────────────────────────
+    # ── Fallback directo con historial de conversación ────────────────────────
     try:
         tipo = _clasificar_mensaje(mensaje)
-        prompt = _cargar_prompt(AGENTES[tipo]).format(mensaje=mensaje)
-        respuesta = _llamar_ollama(prompt)
+        prompt_template = _cargar_prompt(AGENTES[tipo])
+        # La parte antes de {mensaje} son las instrucciones del agente (system prompt)
+        system_instructions = prompt_template.split('{mensaje}')[0].strip()
+        respuesta = _llamar_con_contexto(system_instructions, historial, mensaje)
         Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=tipo)
         _actualizar_titulo(conv, mensaje)
         return JsonResponse({'respuesta': respuesta, 'agente': tipo, 'conv_id': conv.pk})
-    except Exception as e:
-        return JsonResponse({'respuesta': f'Error al conectar con el modelo: {str(e)}', 'conv_id': conv.pk})
+    except Exception:
+        mensaje_error = (
+            'En este momento no puedo conectarme. '
+            'Si estás en peligro, llama al 155 o al 123 — son gratuitos y están las 24 horas. '
+            'Inténtalo de nuevo en un momento.'
+        )
+        Message.objects.create(conversation=conv, role='bot', content=mensaje_error, agente='')
+        _actualizar_titulo(conv, mensaje)
+        return JsonResponse({'respuesta': mensaje_error, 'conv_id': conv.pk})
 
 
 def _actualizar_titulo(conv, primer_mensaje):
@@ -292,9 +332,9 @@ def _actualizar_titulo(conv, primer_mensaje):
         conv.save(update_fields=['title', 'updated_at'])
 
 
+# ── APIs de conversaciones ────────────────────────────────────────────────────
 @login_required
 def conversaciones_api(request):
-    """Lista las conversaciones del usuario actual."""
     convs = (
         Conversation.objects
         .filter(user=request.user)
@@ -305,7 +345,6 @@ def conversaciones_api(request):
 
 @login_required
 def conversacion_mensajes_api(request, conv_id):
-    """Devuelve los mensajes de una conversación del usuario."""
     try:
         conv = Conversation.objects.get(pk=conv_id, user=request.user)
     except Conversation.DoesNotExist:
@@ -314,15 +353,40 @@ def conversacion_mensajes_api(request, conv_id):
     return JsonResponse({'mensajes': mensajes, 'titulo': conv.title})
 
 
+@login_required
+def eliminar_conversacion_api(request, conv_id):
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    try:
+        conv = Conversation.objects.get(pk=conv_id, user=request.user)
+        conv.delete()
+        return JsonResponse({'ok': True})
+    except Conversation.DoesNotExist:
+        return JsonResponse({'error': 'No encontrada'}, status=404)
+
+
+@login_required
+def eliminar_historial_api(request):
+    if request.method != 'DELETE':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+    Conversation.objects.filter(user=request.user).delete()
+    return JsonResponse({'ok': True})
+
+
+# ── Endpoints internos para n8n ───────────────────────────────────────────────
+def _verificar_token_n8n(request):
+    """Retorna True si el token es válido (o si no está configurado)."""
+    if not N8N_TOKEN:
+        return True
+    return request.headers.get('X-N8N-Token', '') == N8N_TOKEN
+
+
 @csrf_exempt
 def clasificar_api(request):
-    """
-    Endpoint interno llamado por n8n para clasificar el mensaje.
-    Recibe JSON: { "mensaje": "..." }
-    Devuelve JSON: { "tipo": "CRISIS|LEGAL|EMOCIONAL" }
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if not _verificar_token_n8n(request):
+        return JsonResponse({'error': 'No autorizado'}, status=401)
 
     import json as _json
     try:
@@ -343,14 +407,10 @@ def clasificar_api(request):
 
 @csrf_exempt
 def agente_api(request):
-    """
-    Endpoint interno llamado por n8n.
-    Recibe JSON: { "mensaje": "...", "tipo": "CRISIS|LEGAL|EMOCIONAL" }
-    Lee el prompt .txt del proyecto Django y llama a Ollama.
-    No requiere login porque solo es accesible desde localhost (n8n).
-    """
     if request.method != 'POST':
         return JsonResponse({'error': 'Método no permitido'}, status=405)
+    if not _verificar_token_n8n(request):
+        return JsonResponse({'error': 'No autorizado'}, status=401)
 
     import json as _json
     try:
@@ -360,10 +420,8 @@ def agente_api(request):
 
     mensaje = body.get('mensaje', '').strip()
     tipo    = body.get('tipo', 'EMOCIONAL').strip().upper()
-
     if not mensaje:
         return JsonResponse({'error': 'Mensaje vacío'}, status=400)
-
     if tipo not in AGENTES:
         tipo = 'EMOCIONAL'
 
@@ -372,12 +430,10 @@ def agente_api(request):
         texto  = _llamar_ollama(prompt)
         return JsonResponse({'respuesta': texto, 'agente': tipo})
     except Exception as e:
-        return JsonResponse(
-            {'respuesta': f'Error al conectar con el modelo: {str(e)}'},
-            status=500,
-        )
+        return JsonResponse({'respuesta': f'Error al conectar con el modelo: {str(e)}'}, status=500)
 
 
+# ── Email OTP ─────────────────────────────────────────────────────────────────
 def _send_otp_email(user, code):
     nombre = user.first_name or 'usuaria'
     brevo_key = os.environ.get('BREVO_API_KEY', '')
