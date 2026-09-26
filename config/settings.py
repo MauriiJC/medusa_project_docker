@@ -135,7 +135,7 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER if EMAIL_HOST_USER else "medusa@sosmujerberraca.co"
 
 # Sites (requerido por allauth)
-SITE_ID = 2
+SITE_ID = 1
 
 # Backends de autenticación
 AUTHENTICATION_BACKENDS = [
