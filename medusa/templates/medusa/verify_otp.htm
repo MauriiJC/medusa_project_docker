@@ -29,12 +29,6 @@
         <h2 class="form-card__title">Revisa tu correo</h2>
         <p class="form-card__subtitle">Te enviamos un código de 6 dígitos. Ingrésalo para continuar.</p>
 
-        {% if otp_demo %}
-        <div style="background:#f0f4ff;border:1.5px solid #7c6fff;border-radius:10px;padding:14px 18px;margin-bottom:18px;text-align:center;">
-          <p style="margin:0 0 4px;font-size:13px;color:#555;">Tu código de verificación es:</p>
-          <p style="margin:0;font-size:28px;font-weight:700;letter-spacing:6px;color:#4f3cc9;">{{ otp_demo }}</p>
-        </div>
-        {% endif %}
 
         {% if messages %}
           {% for message in messages %}

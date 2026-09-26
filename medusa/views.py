@@ -130,10 +130,8 @@ def registro_view(request):
         )
 
         otp = OTPCode.generate_for(user)
-        enviado = _send_otp_email(user, otp.code)
+        _send_otp_email(user, otp.code)
         request.session['pending_user_id'] = user.pk
-        if not enviado:
-            request.session['otp_demo'] = otp.code
         return redirect('verify_otp')
 
     return render(request, 'medusa/registro.htm', {'form': form})
@@ -158,10 +156,8 @@ def login_view(request):
             return render(request, 'medusa/login.htm', {'form': form})
 
         otp = OTPCode.generate_for(user)
-        enviado = _send_otp_email(user, otp.code)
+        _send_otp_email(user, otp.code)
         request.session['pending_user_id'] = user.pk
-        if not enviado:
-            request.session['otp_demo'] = otp.code
         return redirect('verify_otp')
 
     return render(request, 'medusa/login.htm', {'form': form})
@@ -189,8 +185,7 @@ def verify_otp_view(request):
         except (User.DoesNotExist, OTPCode.DoesNotExist):
             form.add_error('code', 'Código incorrecto.')
 
-    otp_demo = request.session.get('otp_demo', '')
-    return render(request, 'medusa/verify_otp.htm', {'form': form, 'otp_demo': otp_demo})
+    return render(request, 'medusa/verify_otp.htm', {'form': form})
 
 
 def resend_otp_view(request):
