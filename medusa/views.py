@@ -337,12 +337,33 @@ def agente_api(request):
 
 def _send_otp_email(user, code):
     nombre = user.first_name or 'usuaria'
-    subject = 'Tu código de verificación — Medusa'
-    message = (
-        f'Hola {nombre},\n\n'
-        f'Tu código de verificación es: {code}\n\n'
-        f'Este código es válido por 10 minutos.\n'
-        f'Si no fuiste tú quien inició sesión, ignora este mensaje.\n\n'
-        f'— Medusa · SOS Mujer Berraca'
-    )
-    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=True)
+    resend_key = os.environ.get('RESEND_API_KEY', '')
+    if resend_key:
+        try:
+            import resend as resend_sdk
+            resend_sdk.api_key = resend_key
+            from_email = os.environ.get('RESEND_FROM', 'Medusa <onboarding@resend.dev>')
+            resend_sdk.Emails.send({
+                'from': from_email,
+                'to': [user.email],
+                'subject': 'Tu código de verificación — Medusa',
+                'text': (
+                    f'Hola {nombre},\n\n'
+                    f'Tu código de verificación es: {code}\n\n'
+                    f'Este código es válido por 10 minutos.\n'
+                    f'Si no fuiste tú quien inició sesión, ignora este mensaje.\n\n'
+                    f'— Medusa · SOS Mujer Berraca'
+                ),
+            })
+        except Exception:
+            pass
+    else:
+        subject = 'Tu código de verificación — Medusa'
+        message = (
+            f'Hola {nombre},\n\n'
+            f'Tu código de verificación es: {code}\n\n'
+            f'Este código es válido por 10 minutos.\n'
+            f'Si no fuiste tú quien inició sesión, ignora este mensaje.\n\n'
+            f'— Medusa · SOS Mujer Berraca'
+        )
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=True)
