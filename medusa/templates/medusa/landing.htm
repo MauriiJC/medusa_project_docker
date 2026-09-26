@@ -6,8 +6,8 @@
 {% block content %}
 
 <!-- ══ NAVBAR ══ -->
-<nav class="navbar">
-  <div class="navbar__brand">
+<nav class="navbar" id="navbar">
+  <a href="#inicio" class="navbar__brand">
     <div class="navbar__logo">
       <img src="{% static 'medusa/img/logo.webp' %}" alt="Logo Medusa" class="logo-img">
     </div>
@@ -15,13 +15,13 @@
       <span class="navbar__brand-name">Medusa</span>
       <span class="navbar__brand-sub">by SOS Mujer Berraca</span>
     </div>
-  </div>
+  </a>
 
-  <div class="navbar__links">
-    <a href="#" class="navbar__link">Inicio</a>
-    <a href="#" class="navbar__link">Recursos</a>
-    <a href="#" class="navbar__link">Sobre Medusa</a>
-    <a href="#" class="navbar__link navbar__link--emergency">Emergencia</a>
+  <div class="navbar__links" id="navbarLinks">
+    <a href="#inicio" class="navbar__link">Inicio</a>
+    <a href="#recursos" class="navbar__link">Recursos</a>
+    <a href="#sobre" class="navbar__link">Sobre Medusa</a>
+    <a href="tel:155" class="navbar__link navbar__link--emergency">Emergencia · 155</a>
   </div>
 
   <div class="navbar__actions">
@@ -36,13 +36,18 @@
       <a href="{% url 'registro' %}" class="btn-filled">Crear cuenta</a>
     {% endif %}
   </div>
+
+  <button type="button" class="navbar__toggle" id="navbarToggle"
+          aria-label="Abrir menú" aria-expanded="false" aria-controls="navbarLinks">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
 <!-- ══ LANDING ══ -->
 <main class="landing">
 
   <!-- Hero -->
-  <section class="hero">
+  <section class="hero" id="inicio">
     <div class="hero__deco-top-right"></div>
     <div class="hero__deco-bottom-left"></div>
 
@@ -103,7 +108,7 @@
   </section>
 
   <!-- Info / Project -->
-  <section class="info-section">
+  <section class="info-section" id="sobre">
     <h2 class="info-section__title">¿Qué es Medusa?</h2>
     <p class="info-section__description">
       Medusa no es un chatbot convencional. Es un sistema de orquestación de múltiples IAs especializadas
@@ -130,6 +135,56 @@
     </div>
   </section>
 
+  <!-- Recursos de emergencia -->
+  <section class="resources-section" id="recursos">
+    <h2 class="resources-section__title">Recursos de emergencia</h2>
+    <p class="resources-section__description">Líneas gratuitas en Colombia. Toca un número para llamar.</p>
+    <div class="resources-grid">
+      <a href="tel:155" class="resource-card resource-card--urgent">
+        <span class="resource-card__number">155</span>
+        <span class="resource-card__label">Línea Púrpura · violencia de género</span>
+      </a>
+      <a href="tel:123" class="resource-card resource-card--urgent">
+        <span class="resource-card__number">123</span>
+        <span class="resource-card__label">Línea de Emergencias</span>
+      </a>
+      <a href="tel:122" class="resource-card">
+        <span class="resource-card__number">122</span>
+        <span class="resource-card__label">Fiscalía General de la Nación</span>
+      </a>
+      <a href="tel:141" class="resource-card">
+        <span class="resource-card__number">141</span>
+        <span class="resource-card__label">ICBF · Bienestar Familiar</span>
+      </a>
+    </div>
+  </section>
+
 </main>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    const nav = document.getElementById('navbar');
+    const toggle = document.getElementById('navbarToggle');
+
+    function cerrarMenu() {
+      nav.classList.remove('navbar--open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Abrir menú');
+    }
+
+    toggle.addEventListener('click', function () {
+      const abierto = nav.classList.toggle('navbar--open');
+      toggle.setAttribute('aria-expanded', abierto);
+      toggle.setAttribute('aria-label', abierto ? 'Cerrar menú' : 'Abrir menú');
+    });
+
+    // Cerrar al elegir un enlace, al tocar fuera o con Escape
+    document.querySelectorAll('#navbarLinks a').forEach(a => a.addEventListener('click', cerrarMenu));
+    document.addEventListener('click', e => { if (!nav.contains(e.target)) cerrarMenu(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarMenu(); });
+  })();
+</script>
 {% endblock %}
