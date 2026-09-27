@@ -872,16 +872,21 @@ input, textarea { font-family: inherit; outline: none; }
   height: 34px;
   display: flex;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 6px 0 10px;
   border-radius: 8px;
   font-size: 13px;
   color: var(--lavender);
   margin-bottom: 2px;
   cursor: pointer;
   transition: background 0.15s;
-  white-space: nowrap;
+  overflow: hidden;
+}
+.chat-item span {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .chat-item:hover { background: var(--dark-card); }
 .chat-item--active { background: var(--dark-card); color: var(--white); }

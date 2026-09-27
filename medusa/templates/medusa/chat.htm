@@ -197,25 +197,22 @@
   .btn-clear-history:hover { opacity: 1; background: rgba(204,26,26,0.08); }
 
   /* Botón eliminar por conversación */
-  .chat-item {
-    position: relative;
-  }
   .chat-item__del {
-    display: none;
-    position: absolute;
-    right: 6px;
-    top: 50%;
-    transform: translateY(-50%);
+    flex-shrink: 0;
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: #cc1a1a;
-    padding: 2px 5px;
+    padding: 3px 6px;
     border-radius: 4px;
     line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    margin-left: 4px;
   }
-  .chat-item:hover .chat-item__del { display: block; }
+  .chat-item:hover .chat-item__del { opacity: 1; }
+  .chat-item__del:hover { background: rgba(204,26,26,0.12); }
 
   /* Modal de confirmación */
   .confirm-modal-overlay {
