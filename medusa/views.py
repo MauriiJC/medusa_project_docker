@@ -28,7 +28,7 @@ def _cargar_prompt(nombre_archivo):
 
 # ── Configuración LLM ─────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL      = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-120b')
+GROQ_MODEL      = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
 OLLAMA_URL      = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
 N8N_WEBHOOK_URL = os.environ.get('N8N_WEBHOOK_URL', '')
 N8N_TOKEN       = os.environ.get('N8N_TOKEN', '')
