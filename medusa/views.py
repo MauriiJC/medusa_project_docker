@@ -16,7 +16,9 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 
-from .forms import LoginForm, OTPForm, OTPToggleForm, ProfileForm, RegistrationForm
+from .forms import (
+    LoginForm, MedusaPasswordResetForm, OTPForm, OTPToggleForm, ProfileForm, RegistrationForm,
+)
 from .models import Conversation, Message, OTPCode, UserProfile
 
 
@@ -551,6 +553,7 @@ class MedusaPasswordResetView(_PasswordResetView):
     'example.com'. Al pasar domain_override usamos el host real del servidor.
     """
     template_name = 'medusa/password_reset.htm'
+    form_class = MedusaPasswordResetForm
     email_template_name = 'medusa/password_reset_email.txt'
     subject_template_name = 'medusa/password_reset_subject.txt'
     success_url = '/password-reset/enviado/'

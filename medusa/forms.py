@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import PasswordResetForm
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -51,6 +52,16 @@ class LoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput, error_messages={
         'required': 'Ingresa tu contraseña.',
     })
+
+
+class MedusaPasswordResetForm(PasswordResetForm):
+    """Incluye cuentas creadas con Google (sin contraseña) para que puedan crear una."""
+
+    def get_users(self, email):
+        email_field = User.get_email_field_name()
+        for user in User._default_manager.filter(**{f'{email_field}__iexact': email, 'is_active': True}):
+            if email.casefold() == (getattr(user, email_field) or '').casefold():
+                yield user
 
 
 class ProfileForm(forms.Form):
