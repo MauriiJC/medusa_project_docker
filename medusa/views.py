@@ -154,9 +154,10 @@ def registro_view(request):
             first_name=cd.get('nombre', ''),
         )
 
-        # OTP deshabilitado temporalmente para pruebas
-        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-        return redirect('chat')
+        otp = OTPCode.generate_for(user)
+        _send_otp_email(user, otp.code)
+        request.session['pending_user_id'] = user.pk
+        return redirect('verify_otp')
 
     return render(request, 'medusa/registro.htm', {'form': form})
 
@@ -179,9 +180,10 @@ def login_view(request):
             messages.error(request, 'Correo o contraseña incorrectos.')
             return render(request, 'medusa/login.htm', {'form': form})
 
-        # OTP deshabilitado temporalmente para pruebas
-        login(request, user)
-        return redirect('chat')
+        otp = OTPCode.generate_for(user)
+        _send_otp_email(user, otp.code)
+        request.session['pending_user_id'] = user.pk
+        return redirect('verify_otp')
 
     return render(request, 'medusa/login.htm', {'form': form})
 
