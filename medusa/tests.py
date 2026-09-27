@@ -174,11 +174,15 @@ class ChatAPITests(TestCase):
     def test_chat_api_continua_conversacion_con_memoria(self, mock_llamar, mock_clasificar):
         r1 = self.client.post(reverse('chat_api'), {'mensaje': 'Primer mensaje'})
         conv_id = r1.json()['conv_id']
+        # Misma fecha exacta para ambos mensajes: el orden debe resolverse por id en cualquier sistema operativo
+        Message.objects.filter(conversation_id=conv_id).update(created_at=timezone.now())
         r2 = self.client.post(reverse('chat_api'), {'mensaje': 'Segundo mensaje', 'conv_id': conv_id})
         self.assertEqual(r2.json()['conv_id'], conv_id)
         self.assertEqual(Message.objects.filter(conversation_id=conv_id).count(), 4)
         historial = mock_llamar.call_args.args[1]
         self.assertEqual([m.content for m in historial], ['Primer mensaje', 'Entiendo cómo te sientes.'])
+        r = self.client.get(reverse('conversacion_mensajes_api', args=[conv_id]))
+        self.assertEqual([m['role'] for m in r.json()['mensajes']], ['user', 'bot', 'user', 'bot'])
 
     @patch('medusa.views._clasificar_mensaje', side_effect=AssertionError('no debe consultar el modelo'))
     def test_chat_api_saludo_simple_sin_modelo(self, mock_clasificar):

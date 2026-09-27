@@ -1,5 +1,6 @@
 import re
 import time
+from types import SimpleNamespace
 
 from django.core.management.base import BaseCommand
 
@@ -25,6 +26,25 @@ def _oraciones(texto):
 class Command(BaseCommand):
     help = 'Envía mensajes de ejemplo a los agentes y muestra clasificación, tiempo y número de oraciones'
 
+    def _probar_memoria(self):
+        """RF-13: el agente debe recordar lo que la usuaria contó antes en la misma conversación."""
+        primero = 'Me llamo Laura y vivo con mi pareja, que me grita todos los días'
+        pregunta = '¿Recuerdas con quién vivo?'
+        try:
+            tipo1 = views._clasificar_mensaje(primero)
+            resp1 = views._responder_agente(tipo1 if tipo1 in views.AGENTES else 'EMOCIONAL', [], primero)
+            historial = [SimpleNamespace(role='user', content=primero), SimpleNamespace(role='bot', content=resp1)]
+            con_memoria = views._responder_agente('EMOCIONAL', historial, pregunta)
+            sin_memoria = views._responder_agente('EMOCIONAL', [], pregunta)
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'[MEMORIA ERROR] {e}\n'))
+            return
+        recuerda = 'pareja' in con_memoria.lower()
+        estilo = self.style.SUCCESS if recuerda else self.style.WARNING
+        self.stdout.write(estilo(f'[MEMORIA {"OK" if recuerda else "no menciona a la pareja"}]'))
+        self.stdout.write(f'  Usuaria: {primero}\n  Usuaria: {pregunta}\n  Medusa:  {con_memoria}')
+        self.stdout.write(f'  Conversación nueva, misma pregunta:\n  Medusa:  {sin_memoria}\n')
+
     def handle(self, *args, **options):
         self.stdout.write(f'Modelo: {views.GROQ_MODEL} | Groq configurado: {bool(views.GROQ_API_KEY)}\n')
         aciertos, tiempos = 0, []
@@ -49,6 +69,8 @@ class Command(BaseCommand):
             estilo = self.style.SUCCESS if ok else self.style.WARNING
             self.stdout.write(estilo(f'[{tipo} {"OK" if ok else "esperaba " + esperada}] {segundos:.1f} s · {largo}'))
             self.stdout.write(f'  Usuaria: {mensaje}\n  Medusa:  {respuesta}\n')
+
+        self._probar_memoria()
 
         if tiempos:
             rapidos = sum(t <= 10 for t in tiempos)

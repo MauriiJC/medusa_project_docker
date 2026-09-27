@@ -376,7 +376,7 @@ def chat_api(request):
 
     # Capturar historial ANTES de guardar el mensaje actual
     historial = list(
-        conv.messages.order_by('-created_at')[:10]
+        conv.messages.order_by('-created_at', '-id')[:10]
     )[::-1]
 
     # Guardar mensaje del usuario
@@ -458,7 +458,7 @@ def conversacion_mensajes_api(request, conv_id):
         conv = Conversation.objects.get(pk=conv_id, user=request.user)
     except Conversation.DoesNotExist:
         return JsonResponse({'error': 'No encontrada'}, status=404)
-    mensajes = list(conv.messages.values('role', 'content', 'agente'))
+    mensajes = list(conv.messages.order_by('created_at', 'id').values('role', 'content', 'agente'))
     return JsonResponse({'mensajes': mensajes, 'titulo': conv.title})
 
 
