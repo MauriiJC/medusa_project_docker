@@ -71,6 +71,7 @@ PostgreSQL.
 Comandos útiles en la consola de Railway:
 
 ```bash
+python manage.py probar_agentes                  # clasificación, tiempo y largo de respuesta de cada agente
 python manage.py test_email correo@ejemplo.com   # prueba el envío de correos con Brevo
 python manage.py axes_reset                      # quita los bloqueos por intentos fallidos
 ```
