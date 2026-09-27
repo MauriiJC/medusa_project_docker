@@ -758,6 +758,20 @@ input, textarea { font-family: inherit; outline: none; }
 .form-card__login-link a { font-weight: 700; color: var(--purple); }
 .form-card__login-link a:hover { text-decoration: underline; }
 
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--purple);
+  text-decoration: none;
+  margin-bottom: 18px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.btn-back:hover { opacity: 1; text-decoration: underline; }
+
 .checkbox-row {
   display: flex;
   align-items: flex-start;
