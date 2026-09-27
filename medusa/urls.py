@@ -13,6 +13,7 @@ urlpatterns = [
     path('google-login/', views.google_login_start, name='google_login_start'),
     path('logout/', views.logout_view, name='logout'),
     path('chat/', views.chat, name='chat'),
+    path('perfil/', views.perfil_view, name='perfil'),
 
     # ── Recuperación de contraseña ────────────────────────────────────────────
     path('password-reset/',

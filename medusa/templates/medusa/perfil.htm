@@ -1,0 +1,141 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Mi perfil — Medusa{% endblock %}
+
+{% block content %}
+<div class="auth-page auth-page--tall">
+
+  <div class="brand-panel">
+    <div class="brand-panel__deco brand-panel__deco--top"></div>
+    <div class="brand-panel__deco brand-panel__deco--bottom"></div>
+    <img src="{% static 'medusa/img/logo.webp' %}" alt="Logo Medusa" class="brand-panel__logo">
+    <h1 class="brand-panel__title">Mi perfil</h1>
+    <p class="brand-panel__subtitle">Administra tus datos y la seguridad<br>de tu cuenta.</p>
+    <div class="privacy-note">🔒 Tus datos son privados y nunca se comparten.</div>
+  </div>
+
+  <div class="form-panel form-panel--top">
+    <div class="form-card">
+      <div class="form-card__body profile-body">
+        <a href="{% url 'chat' %}" class="btn-back">← Volver al chat</a>
+
+        {% if messages %}
+          {% for message in messages %}
+            <p class="profile-alert">{{ message }}</p>
+          {% endfor %}
+        {% endif %}
+
+        <!-- Datos personales -->
+        <section class="profile-section">
+          <h2 class="profile-section__title">Datos personales</h2>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="datos">
+            <div class="form-fields">
+              <div class="form-group">
+                <label class="form-group__label" for="id_nombre">Nombre</label>
+                <input class="form-group__input" type="text" id="id_nombre" name="nombre"
+                       placeholder="¿Cómo quieres que te llame Medusa?" autocomplete="given-name"
+                       value="{{ datos_form.nombre.value|default:'' }}">
+              </div>
+              <div class="form-group">
+                <label class="form-group__label" for="id_email">Correo electrónico</label>
+                <input class="form-group__input{% if datos_form.email.errors %} form-group__input--error{% endif %}"
+                       type="email" id="id_email" name="email" autocomplete="email" required
+                       value="{{ datos_form.email.value|default:'' }}">
+                {% for error in datos_form.email.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+              {% if tiene_password %}
+              <div class="form-group">
+                <label class="form-group__label" for="id_datos_pwd">Contraseña actual <span class="profile-hint">(solo si cambias el correo)</span></label>
+                <input class="form-group__input{% if datos_form.current_password.errors %} form-group__input--error{% endif %}"
+                       type="password" id="id_datos_pwd" name="current_password"
+                       placeholder="••••••••" autocomplete="current-password">
+                {% for error in datos_form.current_password.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+            <button type="submit" class="btn-submit">Guardar cambios</button>
+          </form>
+        </section>
+
+        <!-- Contraseña -->
+        <section class="profile-section">
+          <h2 class="profile-section__title">{% if tiene_password %}Cambiar contraseña{% else %}Crear contraseña{% endif %}</h2>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="password">
+            <div class="form-fields">
+              {% if tiene_password %}
+              <div class="form-group">
+                <label class="form-group__label" for="id_old_password">Contraseña actual</label>
+                <input class="form-group__input{% if password_form.old_password.errors %} form-group__input--error{% endif %}"
+                       type="password" id="id_old_password" name="old_password"
+                       placeholder="••••••••" autocomplete="current-password" required>
+                {% for error in password_form.old_password.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+              {% endif %}
+              <div class="form-group">
+                <label class="form-group__label" for="id_new_password1">Nueva contraseña</label>
+                <input class="form-group__input{% if password_form.new_password1.errors %} form-group__input--error{% endif %}"
+                       type="password" id="id_new_password1" name="new_password1"
+                       placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+                {% for error in password_form.new_password1.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+              <div class="form-group">
+                <label class="form-group__label" for="id_new_password2">Confirmar nueva contraseña</label>
+                <input class="form-group__input{% if password_form.new_password2.errors %} form-group__input--error{% endif %}"
+                       type="password" id="id_new_password2" name="new_password2"
+                       placeholder="Repite la contraseña" autocomplete="new-password" required>
+                {% for error in password_form.new_password2.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+            </div>
+            <button type="submit" class="btn-submit">Actualizar contraseña</button>
+          </form>
+        </section>
+
+        <!-- Verificación en dos pasos -->
+        <section class="profile-section">
+          <div class="profile-otp__head">
+            <h2 class="profile-section__title">Verificación en dos pasos</h2>
+            <span class="otp-badge {% if otp_enabled %}otp-badge--on{% else %}otp-badge--off{% endif %}">
+              {% if otp_enabled %}Activa{% else %}Inactiva{% endif %}
+            </span>
+          </div>
+          <p class="profile-section__desc">
+            {% if otp_enabled %}
+              Cada vez que inicias sesión te enviamos un código a tu correo. Esto protege tu cuenta si alguien conoce tu contraseña.
+            {% else %}
+              Actívala para recibir un código en tu correo cada vez que inicies sesión. Es la forma más segura de proteger tu cuenta.
+            {% endif %}
+          </p>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="otp">
+            {% if otp_enabled and tiene_password %}
+            <div class="form-fields">
+              <div class="form-group">
+                <label class="form-group__label" for="id_otp_pwd">Confirma tu contraseña para desactivarla</label>
+                <input class="form-group__input{% if otp_form.current_password.errors %} form-group__input--error{% endif %}"
+                       type="password" id="id_otp_pwd" name="current_password"
+                       placeholder="••••••••" autocomplete="current-password" required>
+                {% for error in otp_form.current_password.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            {% if otp_enabled %}
+              <button type="submit" class="btn-submit btn-submit--outline">Desactivar verificación</button>
+            {% else %}
+              <button type="submit" class="btn-submit">Activar verificación</button>
+            {% endif %}
+          </form>
+        </section>
+      </div>
+
+      <div class="emergency-strip">🆘&nbsp; ¿Estás en peligro ahora? Llama al 155 — Línea gratuita 24 horas</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

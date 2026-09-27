@@ -21,11 +21,13 @@
   </div>
 
   <div class="sidebar__footer">
-    <div class="sidebar__avatar">{{ user.first_name.0|upper|default:user.username.0|upper }}</div>
-    <div class="sidebar__user-info">
-      <div class="sidebar__user-name">{{ user.first_name|default:user.username }}</div>
-      <div class="sidebar__user-status">Cuenta protegida</div>
-    </div>
+    <a href="{% url 'perfil' %}" class="sidebar__profile-link" title="Mi perfil">
+      <div class="sidebar__avatar">{{ user.first_name.0|upper|default:user.username.0|upper }}</div>
+      <div class="sidebar__user-info">
+        <div class="sidebar__user-name">{{ user.first_name|default:user.username }}</div>
+        <div class="sidebar__user-status">Mi perfil ⚙️</div>
+      </div>
+    </a>
     <form method="post" action="{% url 'logout' %}" style="display:contents">
       {% csrf_token %}
       <button type="submit" class="sidebar__logout">Salir</button>

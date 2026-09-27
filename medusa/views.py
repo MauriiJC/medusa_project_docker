@@ -12,8 +12,11 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .forms import LoginForm, OTPForm, RegistrationForm
-from .models import Conversation, Message, OTPCode
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
+
+from .forms import LoginForm, OTPForm, OTPToggleForm, ProfileForm, RegistrationForm
+from .models import Conversation, Message, OTPCode, UserProfile
 
 
 # ── Directorio de prompts ──────────────────────────────────────────────────────
@@ -188,6 +191,10 @@ def login_view(request):
             messages.error(request, 'Correo o contraseña incorrectos.')
             return render(request, 'medusa/login.htm', {'form': form})
 
+        if not UserProfile.for_user(user).otp_enabled:
+            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+            return redirect('chat')
+
         otp = OTPCode.generate_for(user)
         _send_otp_email(user, otp.code)
         request.session['pending_user_id'] = user.pk
@@ -252,6 +259,55 @@ def google_login_start(request):
 def logout_view(request):
     logout(request)
     return redirect('landing')
+
+
+# ── Perfil ────────────────────────────────────────────────────────────────────
+@login_required
+def perfil_view(request):
+    user = request.user
+    profile = UserProfile.for_user(user)
+    PwdForm = PasswordChangeForm if user.has_usable_password() else SetPasswordForm
+    accion = request.POST.get('accion') if request.method == 'POST' else None
+
+    datos_form = ProfileForm(
+        request.POST if accion == 'datos' else None,
+        user=user,
+        initial={'nombre': user.first_name, 'email': user.email},
+    )
+    password_form = PwdForm(user, request.POST if accion == 'password' else None)
+    otp_form = OTPToggleForm(
+        request.POST if accion == 'otp' else None,
+        user=user,
+        activar=not profile.otp_enabled,
+    )
+
+    if accion == 'datos' and datos_form.is_valid():
+        user.first_name = datos_form.cleaned_data['nombre']
+        user.email = datos_form.cleaned_data['email']
+        user.save(update_fields=['first_name', 'email'])
+        messages.success(request, 'Tus datos se actualizaron correctamente.')
+        return redirect('perfil')
+
+    if accion == 'password' and password_form.is_valid():
+        password_form.save()
+        update_session_auth_hash(request, password_form.user)
+        messages.success(request, 'Tu contraseña se cambió correctamente.')
+        return redirect('perfil')
+
+    if accion == 'otp' and otp_form.is_valid():
+        profile.otp_enabled = not profile.otp_enabled
+        profile.save(update_fields=['otp_enabled'])
+        estado = 'activada' if profile.otp_enabled else 'desactivada'
+        messages.success(request, f'La verificación en dos pasos quedó {estado}.')
+        return redirect('perfil')
+
+    return render(request, 'medusa/perfil.htm', {
+        'datos_form': datos_form,
+        'password_form': password_form,
+        'otp_form': otp_form,
+        'otp_enabled': profile.otp_enabled,
+        'tiene_password': user.has_usable_password(),
+    })
 
 
 # ── Chat ──────────────────────────────────────────────────────────────────────

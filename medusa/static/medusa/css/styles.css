@@ -1472,3 +1472,88 @@ input, textarea { font-family: inherit; outline: none; }
 .form-fields .form-group:nth-child(2) { animation-delay: 0.22s; }
 .form-fields .form-group:nth-child(3) { animation-delay: 0.29s; }
 .form-fields .form-group:nth-child(4) { animation-delay: 0.36s; }
+
+/* ================================================
+   PERFIL
+   ================================================ */
+.form-panel--top { align-items: flex-start; }
+@media (min-width: 769px) {
+  .auth-page--tall { align-items: flex-start; }
+  .auth-page--tall .brand-panel { position: sticky; top: 0; height: 100vh; }
+  .auth-page--tall .form-panel { min-height: 100vh; }
+}
+.profile-body { align-items: stretch; text-align: left; padding-bottom: 8px; }
+.profile-body .btn-back { align-self: flex-start; }
+
+.profile-alert {
+  background: rgba(67,160,71,0.1);
+  border: 1px solid rgba(67,160,71,0.35);
+  color: #2e7d32;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  animation: fadeInUp 0.4s ease both;
+}
+
+.profile-section {
+  padding: 22px 0 6px;
+  border-top: 1px solid rgba(97,63,117,0.12);
+}
+.profile-section:first-of-type { border-top: none; padding-top: 4px; }
+.profile-section__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+}
+.profile-section__desc {
+  font-size: 0.85rem;
+  color: var(--text-gray);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.profile-hint { font-weight: 400; color: #9e88b0; }
+
+.profile-otp__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.profile-otp__head .profile-section__title { margin-bottom: 0; }
+
+.otp-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.otp-badge--on  { background: rgba(67,160,71,0.12); color: #2e7d32; }
+.otp-badge--off { background: rgba(204,26,26,0.1);  color: var(--emergency-red); }
+
+.btn-submit--outline {
+  background: transparent;
+  color: var(--emergency-red);
+  border: 1.5px solid var(--emergency-red);
+}
+.btn-submit--outline:hover { box-shadow: 0 8px 24px rgba(204,26,26,0.18); }
+
+/* Enlace al perfil en el sidebar del chat */
+.sidebar__profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  border-radius: 8px;
+  padding: 4px;
+  margin-left: -4px;
+  transition: background 0.15s;
+}
+.sidebar__profile-link:hover { background: var(--dark-card); }

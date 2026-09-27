@@ -25,6 +25,16 @@ class OTPCode(models.Model):
         return cls.objects.create(user=user, code=code)
 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    otp_enabled = models.BooleanField(default=True)
+
+    @classmethod
+    def for_user(cls, user):
+        profile, _ = cls.objects.get_or_create(user=user)
+        return profile
+
+
 class Conversation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
     title = models.CharField(max_length=200, default='Nueva conversación')
