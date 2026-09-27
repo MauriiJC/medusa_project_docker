@@ -181,11 +181,13 @@ def login_view(request):
     if request.method == 'POST' and form.is_valid():
         cd = form.cleaned_data
         # Mensaje genérico para no revelar si el correo existe
-        try:
-            db_user = User.objects.get(email=cd['email'].lower())
+        user = None
+        for db_user in User.objects.filter(email__iexact=cd['email']).order_by('date_joined'):
+            if not db_user.has_usable_password():
+                continue
             user = authenticate(request, username=db_user.username, password=cd['password'])
-        except User.DoesNotExist:
-            user = None
+            if user is not None:
+                break
 
         if user is None:
             messages.error(request, 'Correo o contraseña incorrectos.')
@@ -311,6 +313,8 @@ def perfil_view(request):
 # ── Chat ──────────────────────────────────────────────────────────────────────
 @login_required
 def chat(request):
+    # El chat no muestra avisos; se descartan para que no reaparezcan en otra página
+    list(messages.get_messages(request))
     return render(request, 'medusa/chat.htm', {'user': request.user})
 
 
