@@ -6,9 +6,17 @@ from django.core.exceptions import ValidationError
 
 class RegistrationForm(forms.Form):
     nombre = forms.CharField(max_length=150, required=False)
-    email = forms.EmailField()
-    password = forms.CharField(widget=forms.PasswordInput, min_length=8)
-    password2 = forms.CharField(widget=forms.PasswordInput)
+    email = forms.EmailField(error_messages={
+        'required': 'Ingresa tu correo electrónico.',
+        'invalid': 'Ingresa un correo electrónico válido.',
+    })
+    password = forms.CharField(widget=forms.PasswordInput, min_length=8, error_messages={
+        'required': 'Ingresa una contraseña.',
+        'min_length': 'La contraseña debe tener al menos 8 caracteres.',
+    })
+    password2 = forms.CharField(widget=forms.PasswordInput, error_messages={
+        'required': 'Confirma tu contraseña.',
+    })
     terminos = forms.BooleanField(error_messages={'required': 'Debes aceptar los términos para continuar.'})
 
     def clean_email(self):
@@ -36,32 +44,17 @@ class RegistrationForm(forms.Form):
 
 
 class LoginForm(forms.Form):
-    email = forms.EmailField()
-    password = forms.CharField(widget=forms.PasswordInput)
+    email = forms.EmailField(error_messages={
+        'required': 'Ingresa tu correo electrónico.',
+        'invalid': 'Ingresa un correo electrónico válido.',
+    })
+    password = forms.CharField(widget=forms.PasswordInput, error_messages={
+        'required': 'Ingresa tu contraseña.',
+    })
 
 
 class ProfileForm(forms.Form):
     nombre = forms.CharField(max_length=150, required=False)
-    email = forms.EmailField()
-    current_password = forms.CharField(widget=forms.PasswordInput, required=False)
-
-    def __init__(self, *args, user, **kwargs):
-        self.user = user
-        super().__init__(*args, **kwargs)
-
-    def clean_email(self):
-        email = self.cleaned_data['email'].lower()
-        if User.objects.filter(email=email).exclude(pk=self.user.pk).exists():
-            raise ValidationError('Este correo ya está registrado.')
-        return email
-
-    def clean(self):
-        cleaned_data = super().clean()
-        email = cleaned_data.get('email')
-        if email and email != (self.user.email or '').lower() and self.user.has_usable_password():
-            if not self.user.check_password(cleaned_data.get('current_password') or ''):
-                self.add_error('current_password', 'Para cambiar tu correo ingresa tu contraseña actual.')
-        return cleaned_data
 
 
 class OTPToggleForm(forms.Form):

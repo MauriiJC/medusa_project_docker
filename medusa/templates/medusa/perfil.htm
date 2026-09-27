@@ -41,20 +41,10 @@
               </div>
               <div class="form-group">
                 <label class="form-group__label" for="id_email">Correo electrónico</label>
-                <input class="form-group__input{% if datos_form.email.errors %} form-group__input--error{% endif %}"
-                       type="email" id="id_email" name="email" autocomplete="email" required
-                       value="{{ datos_form.email.value|default:'' }}">
-                {% for error in datos_form.email.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+                <input class="form-group__input form-group__input--locked" type="email" id="id_email"
+                       value="{{ user.email }}" readonly aria-describedby="email-hint">
+                <p class="profile-hint" id="email-hint">🔒 El correo está vinculado a tu cuenta y no se puede cambiar.</p>
               </div>
-              {% if tiene_password %}
-              <div class="form-group">
-                <label class="form-group__label" for="id_datos_pwd">Contraseña actual <span class="profile-hint">(solo si cambias el correo)</span></label>
-                <input class="form-group__input{% if datos_form.current_password.errors %} form-group__input--error{% endif %}"
-                       type="password" id="id_datos_pwd" name="current_password"
-                       placeholder="••••••••" autocomplete="current-password">
-                {% for error in datos_form.current_password.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
-              </div>
-              {% endif %}
             </div>
             <button type="submit" class="btn-submit">Guardar cambios</button>
           </form>

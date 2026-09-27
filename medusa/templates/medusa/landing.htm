@@ -61,8 +61,13 @@
         Desarrollado por SOS Mujer Berraca en Colombia.
       </p>
       <div class="hero__ctas">
-        <a href="{% url 'registro' %}" class="cta-primary">✨&nbsp; Comenzar ahora</a>
-        <a href="{% url 'login' %}" class="cta-secondary">Ya tengo cuenta</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'chat' %}" class="cta-primary">💬&nbsp; Continuar al chat</a>
+          <a href="{% url 'perfil' %}" class="cta-secondary">Mi perfil</a>
+        {% else %}
+          <a href="{% url 'registro' %}" class="cta-primary">✨&nbsp; Comenzar ahora</a>
+          <a href="{% url 'login' %}" class="cta-secondary">Ya tengo cuenta</a>
+        {% endif %}
       </div>
     </div>
 
@@ -160,6 +165,30 @@
   </section>
 
 </main>
+
+<footer class="site-footer">
+  <div class="site-footer__brand">
+    <img src="{% static 'medusa/img/logo.webp' %}" alt="" class="site-footer__logo">
+    <div>
+      <strong>Medusa</strong>
+      <span>by SOS Mujer Berraca · Pasto, Nariño</span>
+    </div>
+  </div>
+  <nav class="site-footer__links" aria-label="Enlaces del pie de página">
+    <a href="#inicio">Inicio</a>
+    <a href="#sobre">Sobre Medusa</a>
+    <a href="#recursos">Recursos</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'chat' %}">Ir al chat</a>
+    {% else %}
+      <a href="{% url 'login' %}">Iniciar sesión</a>
+    {% endif %}
+  </nav>
+  <p class="site-footer__note">
+    Medusa es una herramienta de acompañamiento y no reemplaza la atención profesional.
+    Si estás en peligro, llama al <a href="tel:155">155</a> o al <a href="tel:123">123</a>.
+  </p>
+</footer>
 
 {% endblock %}
 

@@ -271,8 +271,7 @@ def perfil_view(request):
 
     datos_form = ProfileForm(
         request.POST if accion == 'datos' else None,
-        user=user,
-        initial={'nombre': user.first_name, 'email': user.email},
+        initial={'nombre': user.first_name},
     )
     password_form = PwdForm(user, request.POST if accion == 'password' else None)
     otp_form = OTPToggleForm(
@@ -283,8 +282,7 @@ def perfil_view(request):
 
     if accion == 'datos' and datos_form.is_valid():
         user.first_name = datos_form.cleaned_data['nombre']
-        user.email = datos_form.cleaned_data['email']
-        user.save(update_fields=['first_name', 'email'])
+        user.save(update_fields=['first_name'])
         messages.success(request, 'Tus datos se actualizaron correctamente.')
         return redirect('perfil')
 
