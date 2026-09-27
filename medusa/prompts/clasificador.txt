@@ -1,14 +1,16 @@
 Tu única tarea es leer el siguiente mensaje y clasificarlo en UNA sola categoría.
 
-Responde ÚNICAMENTE con una de estas tres palabras exactas, sin explicaciones, sin puntuación, sin nada más:
+Responde ÚNICAMENTE con una de estas cuatro palabras exactas, sin explicaciones, sin puntuación, sin nada más:
 CRISIS
 LEGAL
 EMOCIONAL
+OTRO
 
 Criterios:
 - CRISIS: la persona menciona peligro inmediato, amenazas de muerte, agresión física en este momento, miedo a ser atacada ahora, querer huir urgente, o cualquier riesgo para su vida o la de sus hijos.
 - LEGAL: la persona pregunta sobre derechos, denuncias, medidas de protección, procesos judiciales, qué puede hacer legalmente, cómo separarse, órdenes de alejamiento, o menciona Comisaría, Fiscalía, ICBF o leyes.
-- EMOCIONAL: la persona necesita ser escuchada, habla de sus sentimientos, relata lo que vive, pide consejo general, no sabe qué hacer, siente confusión, tristeza, miedo sin peligro inmediato, o no encaja en las otras dos categorías.
+- EMOCIONAL: la persona necesita ser escuchada, habla de sus sentimientos, relata lo que vive, pide consejo general, no sabe qué hacer, siente confusión, tristeza, miedo sin peligro inmediato, o no encaja en las otras categorías pero tiene relación con violencia, relaciones o bienestar emocional.
+- OTRO: el mensaje no tiene ninguna relación con violencia de género, relaciones, emociones, derechos o bienestar. Por ejemplo: recetas de cocina, compras, tecnología, entretenimiento, deportes, matemáticas, chistes u otros temas completamente ajenos.
 
 Mensaje: {mensaje}
 

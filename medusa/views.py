@@ -118,10 +118,16 @@ def _clasificar_mensaje(mensaje):
     prompt = _cargar_prompt('clasificador.txt').format(mensaje=mensaje)
     resultado = _llamar_ollama(prompt, num_predict=5, num_ctx=512)
     palabra = resultado.strip().upper().split()[0] if resultado.strip() else ''
-    if palabra in ('CRISIS', 'LEGAL', 'EMOCIONAL'):
+    if palabra in ('CRISIS', 'LEGAL', 'EMOCIONAL', 'OTRO'):
         return palabra
     return 'EMOCIONAL'
 
+
+RESPUESTA_OTRO = (
+    'Estoy aquí para acompañarte en situaciones relacionadas con tu bienestar y seguridad. '
+    'Si hay algo que estés viviendo y quieras contarme, puedes hacerlo con confianza. '
+    '¿Hay algo en lo que pueda ayudarte?'
+)
 
 AGENTES = {
     'CRISIS':    'agente_crisis.txt',
@@ -313,8 +319,11 @@ def chat_api(request):
     # ── Fallback directo con historial de conversación ────────────────────────
     try:
         tipo = _clasificar_mensaje(mensaje)
+        if tipo == 'OTRO':
+            Message.objects.create(conversation=conv, role='bot', content=RESPUESTA_OTRO, agente='EMOCIONAL')
+            _actualizar_titulo(conv, mensaje)
+            return JsonResponse({'respuesta': RESPUESTA_OTRO, 'agente': 'EMOCIONAL', 'conv_id': conv.pk})
         prompt_template = _cargar_prompt(AGENTES[tipo])
-        # La parte antes de {mensaje} son las instrucciones del agente (system prompt)
         system_instructions = prompt_template.split('{mensaje}')[0].strip()
         respuesta = _llamar_con_contexto(system_instructions, historial, mensaje)
         Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=tipo)
