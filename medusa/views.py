@@ -28,7 +28,7 @@ def _cargar_prompt(nombre_archivo):
 
 # ── Configuración LLM ─────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.environ.get('GROQ_API_KEY', '')
-GROQ_MODEL      = os.environ.get('GROQ_MODEL', 'llama3-70b-8192')
+GROQ_MODEL      = os.environ.get('GROQ_MODEL', 'openai/gpt-oss-20b')
 OLLAMA_URL      = os.environ.get('OLLAMA_URL', 'http://ollama:11434/api/generate')
 N8N_WEBHOOK_URL = os.environ.get('N8N_WEBHOOK_URL', '')
 N8N_TOKEN       = os.environ.get('N8N_TOKEN', '')
@@ -49,7 +49,8 @@ def _llamar_groq(prompt):
         timeout=30,
     )
     respuesta.raise_for_status()
-    return respuesta.json()['choices'][0]['message']['content'].strip()
+    msg = respuesta.json()['choices'][0]['message']
+    return (msg.get('content') or msg.get('reasoning') or '').strip()
 
 
 def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
@@ -71,7 +72,8 @@ def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
         timeout=30,
     )
     respuesta.raise_for_status()
-    return respuesta.json()['choices'][0]['message']['content'].strip()
+    msg = respuesta.json()['choices'][0]['message']
+    return (msg.get('content') or msg.get('reasoning') or '').strip()
 
 
 def _llamar_ollama_directo(prompt, num_predict=400, num_ctx=2048):
