@@ -1,3 +1,4 @@
+import logging
 import os
 import requests as http_requests
 
@@ -17,6 +18,9 @@ from django.contrib.auth.forms import PasswordChangeForm, SetPasswordForm
 
 from .forms import LoginForm, OTPForm, OTPToggleForm, ProfileForm, RegistrationForm
 from .models import Conversation, Message, OTPCode, UserProfile
+
+
+logger = logging.getLogger(__name__)
 
 
 # ── Directorio de prompts ──────────────────────────────────────────────────────
@@ -530,8 +534,12 @@ def _send_otp_email(user, code):
             },
             timeout=15,
         )
-        return resp.status_code in (200, 201)
+        if resp.status_code not in (200, 201):
+            logger.error('Brevo rechazó el código OTP: %s %s', resp.status_code, resp.text[:300])
+            return False
+        return True
     except Exception:
+        logger.exception('No se pudo enviar el código OTP')
         return False
 
 
@@ -548,12 +556,16 @@ class MedusaPasswordResetView(_PasswordResetView):
     success_url = '/password-reset/enviado/'
 
     def form_valid(self, form):
-        form.save(
-            domain_override=self.request.get_host(),
-            use_https=self.request.is_secure(),
-            token_generator=self.token_generator,
-            from_email=self.from_email,
-            request=self.request,
-            extra_email_context=self.extra_email_context,
-        )
+        try:
+            form.save(
+                domain_override=self.request.get_host(),
+                use_https=self.request.is_secure(),
+                token_generator=self.token_generator,
+                from_email=self.from_email,
+                request=self.request,
+                extra_email_context=self.extra_email_context,
+            )
+        except Exception:
+            # No se revela a quien pide el enlace; el detalle queda en los logs
+            logger.exception('Falló el envío del correo de recuperación de contraseña')
         return HttpResponseRedirect(self.success_url)

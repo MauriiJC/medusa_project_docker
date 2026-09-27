@@ -13,21 +13,32 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dest = options['destinatario']
 
+        from django.contrib.auth.models import User
+
         self.stdout.write(f'Backend:  {settings.EMAIL_BACKEND}')
-        self.stdout.write(f'Host:     {getattr(settings, "EMAIL_HOST", "N/A")}')
-        self.stdout.write(f'Puerto:   {getattr(settings, "EMAIL_PORT", "N/A")}')
-        self.stdout.write(f'Usuario:  {getattr(settings, "EMAIL_HOST_USER", "N/A")}')
         self.stdout.write(f'From:     {settings.DEFAULT_FROM_EMAIL}')
+
+        cuentas = User.objects.filter(email__iexact=dest)
+        if not cuentas:
+            self.stdout.write(self.style.WARNING('No hay ninguna cuenta con ese correo.'))
+        for u in cuentas:
+            self.stdout.write(
+                f'Cuenta: {u.username} | activa: {u.is_active} | '
+                f'tiene contraseña: {u.has_usable_password()} (sin contraseña no llega el correo de recuperación)'
+            )
         self.stdout.write(f'Enviando a {dest} ...')
 
         try:
-            send_mail(
+            enviados = send_mail(
                 subject='Prueba de email — Medusa',
-                message='Si recibes este correo, el SMTP de Brevo está funcionando correctamente.',
+                message='Si recibes este correo, el envío con Brevo está funcionando correctamente.',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[dest],
                 fail_silently=False,
             )
-            self.stdout.write(self.style.SUCCESS('Correo enviado exitosamente.'))
+            if enviados:
+                self.stdout.write(self.style.SUCCESS('Brevo aceptó el correo.'))
+            else:
+                self.stdout.write(self.style.ERROR('No se envió: revisa BREVO_API_KEY.'))
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'ERROR al enviar: {e}'))
