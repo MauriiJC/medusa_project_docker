@@ -35,8 +35,7 @@ class Command(BaseCommand):
                 if tipo == 'OTRO':
                     respuesta = views.RESPUESTA_OTRO
                 else:
-                    instrucciones = views._cargar_prompt(views.AGENTES[tipo]).split('{mensaje}')[0].strip()
-                    respuesta = views._llamar_con_contexto(instrucciones, [], mensaje)
+                    respuesta = views._responder_agente(tipo, [], mensaje)
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'[ERROR] {mensaje}\n  {e}\n'))
                 continue

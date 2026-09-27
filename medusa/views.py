@@ -160,6 +160,19 @@ AGENTES = {
     'LEGAL':     'agente_legal.txt',
     'EMOCIONAL': 'agente_emocional.txt',
 }
+MAX_ORACIONES = {'CRISIS': 3, 'LEGAL': 4, 'EMOCIONAL': 4}
+
+
+def _recortar_oraciones(texto, limite):
+    """Une los párrafos y conserva como máximo `limite` oraciones, aunque el modelo se extienda."""
+    oraciones = re.split(r'(?<=[.!?])\s+', ' '.join(texto.split()))
+    return ' '.join(oraciones[:limite])
+
+
+def _responder_agente(tipo, historial, mensaje):
+    instrucciones = _cargar_prompt(AGENTES[tipo]).split('{mensaje}')[0].strip()
+    respuesta = _llamar_con_contexto(instrucciones, historial, mensaje)
+    return _recortar_oraciones(respuesta, MAX_ORACIONES[tipo])
 
 
 # ── Vistas públicas ───────────────────────────────────────────────────────────
@@ -406,9 +419,7 @@ def chat_api(request):
             Message.objects.create(conversation=conv, role='bot', content=RESPUESTA_OTRO, agente='OTRO')
             _actualizar_titulo(conv, mensaje)
             return JsonResponse({'respuesta': RESPUESTA_OTRO, 'agente': 'OTRO', 'conv_id': conv.pk})
-        prompt_template = _cargar_prompt(AGENTES[tipo])
-        system_instructions = prompt_template.split('{mensaje}')[0].strip()
-        respuesta = _llamar_con_contexto(system_instructions, historial, mensaje)
+        respuesta = _responder_agente(tipo, historial, mensaje)
         Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=tipo)
         _actualizar_titulo(conv, mensaje)
         return JsonResponse({'respuesta': respuesta, 'agente': tipo, 'conv_id': conv.pk})

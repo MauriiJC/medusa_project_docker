@@ -220,6 +220,18 @@ class ClasificadorYRespaldoTests(TestCase):
             with patch('medusa.views._llamar_ollama', return_value=salida):
                 self.assertEqual(views._clasificar_mensaje('mensaje'), esperada)
 
+    @patch('medusa.views._llamar_con_contexto', return_value=(
+        'Tienes todo el derecho a vivir sin violencia.  \n\nLa Ley 1257 de 2008 te protege. '
+        'Puedes ir a la Comisaría de Familia. No necesitas abogado.  \n\n'
+        'Si hay niños, el ICBF puede intervenir. También puedes llamar a la línea 155.'
+    ))
+    def test_respuesta_limitada_en_oraciones(self, mock_llamar):
+        legal = views._responder_agente('LEGAL', [], '¿Qué derechos tengo?')
+        self.assertEqual(legal, 'Tienes todo el derecho a vivir sin violencia. La Ley 1257 de 2008 te protege. '
+                                'Puedes ir a la Comisaría de Familia. No necesitas abogado.')
+        crisis = views._responder_agente('CRISIS', [], 'me amenazó')
+        self.assertEqual(crisis.count('.'), 3)
+
     @patch('medusa.views.GROQ_API_KEY', 'clave-invalida')
     @patch('medusa.views._llamar_ollama_directo', return_value='Respuesta desde Ollama')
     @patch('medusa.views._llamar_groq_con_contexto', side_effect=RuntimeError('401 Groq'))
