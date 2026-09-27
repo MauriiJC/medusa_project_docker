@@ -138,17 +138,11 @@ AXES_RESET_ON_SUCCESS = True
 AXES_VERBOSE = False
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-if os.environ.get('BREVO_SMTP_KEY'):
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp-relay.brevo.com'
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_USER', '')
-    EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_KEY', '')
-    DEFAULT_FROM_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', 'medusaingesis@gmail.com')
+if os.environ.get('BREVO_API_KEY'):
+    EMAIL_BACKEND = 'medusa.email_backend.BrevoAPIBackend'
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'medusaingesis@gmail.com'
+DEFAULT_FROM_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', 'medusaingesis@gmail.com')
 
 # ── Sites (requerido por allauth) ─────────────────────────────────────────────
 SITE_ID = 1
