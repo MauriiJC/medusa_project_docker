@@ -57,8 +57,8 @@ def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
     """Llamada multi-turno con historial de conversación."""
     msgs = [{'role': 'system', 'content': system_instructions}]
     for m in historial:
-        role = 'user' if m['role'] == 'user' else 'assistant'
-        msgs.append({'role': role, 'content': m['content']})
+        role = 'user' if m.role == 'user' else 'assistant'
+        msgs.append({'role': role, 'content': m.content})
     msgs.append({'role': 'user', 'content': nuevo_mensaje})
     respuesta = http_requests.post(
         'https://api.groq.com/openai/v1/chat/completions',
