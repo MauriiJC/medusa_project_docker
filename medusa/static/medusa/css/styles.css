@@ -1340,3 +1340,116 @@ input, textarea { font-family: inherit; outline: none; }
   .form-card__body { padding: 28px 20px 0; }
   .emergency-strip { font-size: 12px; padding: 14px 16px; }
 }
+
+/* ================================================
+   ANIMACIONES GLOBALES
+   ================================================ */
+
+/* Keyframes */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-32px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes bounceIn {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { transform: scale(1.15); }
+  80%  { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0%   { box-shadow: 0 20px 60px rgba(97,63,117,0.15); }
+  50%  { box-shadow: 0 24px 70px rgba(97,63,117,0.28); }
+  100% { box-shadow: 0 20px 60px rgba(97,63,117,0.15); }
+}
+
+/* Entrada del card de formulario */
+.form-card {
+  animation: fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Entrada del panel de marca */
+.brand-panel__logo,
+.brand-panel__title,
+.brand-panel__subtitle,
+.brand-panel .privacy-note,
+.brand-panel .emergency-badge {
+  animation: slideInLeft 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.brand-panel__title      { animation-delay: 0.08s; }
+.brand-panel__subtitle   { animation-delay: 0.16s; }
+.brand-panel .privacy-note   { animation-delay: 0.22s; }
+.brand-panel .emergency-badge { animation-delay: 0.24s; }
+
+/* Logo flotante en páginas de confirmación */
+.confirm-icon {
+  display: block;
+  font-size: 3.2rem;
+  margin-bottom: 18px;
+  animation: bounceIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+/* Botón principal — mejor hover */
+.btn-submit {
+  transition: opacity 0.2s, transform 0.18s, box-shadow 0.2s;
+}
+.btn-submit:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(97,63,117,0.35);
+}
+.btn-submit:active {
+  transform: translateY(0px);
+  box-shadow: none;
+}
+
+/* Botón Google */
+.btn-google {
+  transition: background 0.2s, transform 0.18s, box-shadow 0.2s;
+}
+.btn-google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(97,63,117,0.12);
+}
+
+/* Inputs — glow al focus */
+.form-group__input {
+  transition: border-color 0.22s, box-shadow 0.22s;
+}
+.form-group__input:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(97,63,117,0.12);
+}
+
+/* Links internos suaves */
+.form-card__login-link a,
+.form-card__forgot {
+  transition: color 0.18s;
+}
+
+/* Emergency strip pulse sutil */
+.emergency-strip {
+  transition: background 0.2s;
+}
+
+/* Entrada escalonada de los form-fields */
+.form-fields .form-group {
+  animation: fadeInUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.form-fields .form-group:nth-child(1) { animation-delay: 0.15s; }
+.form-fields .form-group:nth-child(2) { animation-delay: 0.22s; }
+.form-fields .form-group:nth-child(3) { animation-delay: 0.29s; }
+.form-fields .form-group:nth-child(4) { animation-delay: 0.36s; }
