@@ -151,6 +151,10 @@ ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 SOCIALACCOUNT_LOGIN_ON_GET = True
+# Google ya verifica el correo: si coincide con una cuenta existente, entra a esa cuenta
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
 
 _GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 SOCIALACCOUNT_PROVIDERS = {
