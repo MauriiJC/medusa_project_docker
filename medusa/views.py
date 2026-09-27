@@ -1,5 +1,9 @@
+import hmac
 import logging
 import os
+import re
+import unicodedata
+
 import requests as http_requests
 
 from django.conf import settings
@@ -44,22 +48,33 @@ N8N_TOKEN       = os.environ.get('N8N_TOKEN', '')
 
 
 # ── Llamadas al modelo ────────────────────────────────────────────────────────
+def _groq_chat(msgs, temperature=0.7, max_tokens=800):
+    payload = {
+        'model': GROQ_MODEL,
+        'messages': msgs,
+        'temperature': temperature,
+        'max_tokens': max_tokens,
+    }
+    # Los modelos gpt-oss razonan antes de responder; con esfuerzo bajo responden más rápido
+    if GROQ_MODEL.startswith('openai/gpt-oss'):
+        payload['reasoning_effort'] = 'low'
+    headers = {'Authorization': f'Bearer {GROQ_API_KEY.strip()}', 'Content-Type': 'application/json'}
+    url = 'https://api.groq.com/openai/v1/chat/completions'
+    respuesta = http_requests.post(url, headers=headers, json=payload, timeout=30)
+    if respuesta.status_code == 400 and 'reasoning_effort' in payload:
+        payload.pop('reasoning_effort')
+        respuesta = http_requests.post(url, headers=headers, json=payload, timeout=30)
+    respuesta.raise_for_status()
+    contenido = (respuesta.json()['choices'][0]['message'].get('content') or '').strip()
+    if not contenido:
+        # Nunca se muestra el razonamiento interno del modelo a la usuaria
+        raise ValueError('Groq devolvió una respuesta vacía')
+    return contenido
+
+
 def _llamar_groq(prompt):
     """Llamada simple de un solo turno (usada para clasificación)."""
-    respuesta = http_requests.post(
-        'https://api.groq.com/openai/v1/chat/completions',
-        headers={'Authorization': f'Bearer {GROQ_API_KEY.strip()}', 'Content-Type': 'application/json'},
-        json={
-            'model': GROQ_MODEL,
-            'messages': [{'role': 'user', 'content': prompt}],
-            'temperature': 0.7,
-            'max_tokens': 800,
-        },
-        timeout=30,
-    )
-    respuesta.raise_for_status()
-    msg = respuesta.json()['choices'][0]['message']
-    return (msg.get('content') or msg.get('reasoning') or '').strip()
+    return _groq_chat([{'role': 'user', 'content': prompt}], temperature=0)
 
 
 def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
@@ -69,20 +84,7 @@ def _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje):
         role = 'user' if m.role == 'user' else 'assistant'
         msgs.append({'role': role, 'content': m.content})
     msgs.append({'role': 'user', 'content': nuevo_mensaje})
-    respuesta = http_requests.post(
-        'https://api.groq.com/openai/v1/chat/completions',
-        headers={'Authorization': f'Bearer {GROQ_API_KEY.strip()}', 'Content-Type': 'application/json'},
-        json={
-            'model': GROQ_MODEL,
-            'messages': msgs,
-            'temperature': 0.7,
-            'max_tokens': 800,
-        },
-        timeout=30,
-    )
-    respuesta.raise_for_status()
-    msg = respuesta.json()['choices'][0]['message']
-    return (msg.get('content') or msg.get('reasoning') or '').strip()
+    return _groq_chat(msgs)
 
 
 def _llamar_ollama_directo(prompt, num_predict=400, num_ctx=2048):
@@ -102,34 +104,49 @@ def _llamar_ollama_directo(prompt, num_predict=400, num_ctx=2048):
                 'top_p': 0.9,
             },
         },
-        timeout=120,
+        timeout=(5, 120),
     )
-    return respuesta.json().get('response', '').strip()
+    respuesta.raise_for_status()
+    contenido = respuesta.json().get('response', '').strip()
+    if not contenido:
+        raise ValueError('Ollama devolvió una respuesta vacía')
+    return contenido
 
 
 def _llamar_ollama(prompt, num_predict=180, num_ctx=512):
-    """Enruta a Groq si hay API key, sino a Ollama (usado para clasificación)."""
+    """Groq si hay API key; si falla o no hay clave, Ollama (usado para clasificación)."""
     if GROQ_API_KEY:
-        return _llamar_groq(prompt)
+        try:
+            return _llamar_groq(prompt)
+        except Exception:
+            logger.exception('Groq falló al clasificar; se intenta con Ollama')
     return _llamar_ollama_directo(prompt, num_predict, num_ctx)
 
 
 def _llamar_con_contexto(system_instructions, historial, nuevo_mensaje):
-    """Enruta a Groq con historial si hay API key, sino fallback a Ollama sin historial."""
+    """Groq con historial; si falla o no hay clave, Ollama con los últimos mensajes en el prompt."""
     if GROQ_API_KEY:
-        return _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje)
-    prompt_fallback = f"{system_instructions}\n\nLa usuaria dice: {nuevo_mensaje}"
+        try:
+            return _llamar_groq_con_contexto(system_instructions, historial, nuevo_mensaje)
+        except Exception:
+            logger.exception('Groq falló al responder; se intenta con Ollama')
+    previos = '\n'.join(
+        f"{'La usuaria' if m.role == 'user' else 'Medusa'}: {m.content}" for m in historial
+    )
+    prompt_fallback = f"{system_instructions}\n\n{previos}\nLa usuaria dice: {nuevo_mensaje}"
     return _llamar_ollama_directo(prompt_fallback)
 
 
 # ── Clasificador ───────────────────────────────────────────────────────────────
+CATEGORIAS = ('CRISIS', 'LEGAL', 'EMOCIONAL', 'OTRO')
+
+
 def _clasificar_mensaje(mensaje):
     prompt = _cargar_prompt('clasificador.txt').format(mensaje=mensaje)
     resultado = _llamar_ollama(prompt, num_predict=5, num_ctx=512)
-    palabra = resultado.strip().upper().split()[0] if resultado.strip() else ''
-    if palabra in ('CRISIS', 'LEGAL', 'EMOCIONAL', 'OTRO'):
-        return palabra
-    return 'EMOCIONAL'
+    # El modelo a veces añade puntuación o formato ("**Legal**", "CRISIS."): se toma la primera categoría válida
+    encontrada = re.search(r'\b(' + '|'.join(CATEGORIAS) + r')\b', resultado.upper())
+    return encontrada.group(1) if encontrada else 'EMOCIONAL'
 
 
 RESPUESTA_OTRO = (
@@ -324,7 +341,6 @@ def chat(request):
     return render(request, 'medusa/chat.htm', {'user': request.user})
 
 
-@csrf_exempt
 @login_required
 def chat_api(request):
     if request.method != 'POST':
@@ -355,7 +371,10 @@ def chat_api(request):
 
     # ── Filtro rápido para saludos simples ────────────────────────────────────
     saludos_simples = {'hola', 'buenas', 'ola', 'hi', 'hello', 'buenos dias', 'buenas tardes', 'buenas noches'}
-    if mensaje.lower() in saludos_simples:
+    normalizado = unicodedata.normalize('NFKD', mensaje.lower())
+    normalizado = ''.join(c for c in normalizado if not unicodedata.combining(c))
+    normalizado = ' '.join(re.sub(r'[^\w\s]', ' ', normalizado).split())
+    if normalizado in saludos_simples:
         respuesta = '¡Hola! Qué gusto que estés por aquí. ¿Cómo te sientes hoy o de qué te gustaría hablar?'
         agente = 'EMOCIONAL'
         Message.objects.create(conversation=conv, role='bot', content=respuesta, agente=agente)
@@ -384,9 +403,9 @@ def chat_api(request):
     try:
         tipo = _clasificar_mensaje(mensaje)
         if tipo == 'OTRO':
-            Message.objects.create(conversation=conv, role='bot', content=RESPUESTA_OTRO, agente='EMOCIONAL')
+            Message.objects.create(conversation=conv, role='bot', content=RESPUESTA_OTRO, agente='OTRO')
             _actualizar_titulo(conv, mensaje)
-            return JsonResponse({'respuesta': RESPUESTA_OTRO, 'agente': 'EMOCIONAL', 'conv_id': conv.pk})
+            return JsonResponse({'respuesta': RESPUESTA_OTRO, 'agente': 'OTRO', 'conv_id': conv.pk})
         prompt_template = _cargar_prompt(AGENTES[tipo])
         system_instructions = prompt_template.split('{mensaje}')[0].strip()
         respuesta = _llamar_con_contexto(system_instructions, historial, mensaje)
@@ -394,6 +413,7 @@ def chat_api(request):
         _actualizar_titulo(conv, mensaje)
         return JsonResponse({'respuesta': respuesta, 'agente': tipo, 'conv_id': conv.pk})
     except Exception:
+        logger.exception('Ningún motor de IA pudo responder')
         mensaje_error = (
             'En este momento no puedo conectarme. '
             'Si estás en peligro, llama al 155 o al 123 — son gratuitos y están las 24 horas. '
@@ -453,10 +473,10 @@ def eliminar_historial_api(request):
 
 # ── Endpoints internos para n8n ───────────────────────────────────────────────
 def _verificar_token_n8n(request):
-    """Retorna True si el token es válido (o si no está configurado)."""
+    """Sin N8N_TOKEN configurado los endpoints quedan cerrados, para que nadie use la IA sin autenticarse."""
     if not N8N_TOKEN:
-        return True
-    return request.headers.get('X-N8N-Token', '') == N8N_TOKEN
+        return False
+    return hmac.compare_digest(request.headers.get('X-N8N-Token', ''), N8N_TOKEN)
 
 
 @csrf_exempt
@@ -516,6 +536,11 @@ def _send_otp_email(user, code):
     nombre = user.first_name or 'usuaria'
     brevo_key = os.environ.get('BREVO_API_KEY', '')
     if not brevo_key:
+        if settings.DEBUG:
+            # En desarrollo local sin Brevo el código se muestra en la terminal para poder entrar
+            print(f'\n[Medusa] Codigo OTP para {user.email}: {code}\n', flush=True)
+            return True
+        logger.error('BREVO_API_KEY no está configurada; no se pudo enviar el código OTP.')
         return False
     try:
         sender_email = os.environ.get('BREVO_SENDER_EMAIL', 'medusaingesis@gmail.com')

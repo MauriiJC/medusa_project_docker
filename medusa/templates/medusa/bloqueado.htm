@@ -1,0 +1,41 @@
+{% extends 'medusa/base.htm' %}
+{% load static %}
+
+{% block title %}Acceso bloqueado temporalmente — Medusa{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+
+  <div class="brand-panel">
+    <div class="brand-panel__deco brand-panel__deco--top"></div>
+    <div class="brand-panel__deco brand-panel__deco--bottom"></div>
+    <img src="{% static 'medusa/img/logo.webp' %}" alt="Logo Medusa" class="brand-panel__logo">
+    <h1 class="brand-panel__title">Medusa</h1>
+    <p class="brand-panel__subtitle">Sistema de IA para acompañamiento<br>a mujeres víctimas de violencia de género</p>
+    <div class="emergency-badge">🆘&nbsp; Emergencia: Llama al 155 · Gratuito 24/7</div>
+  </div>
+
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="form-card__body" style="padding: 44px 48px 40px;">
+        <span class="confirm-icon">🔒</span>
+        <h2 class="form-card__title">Acceso bloqueado temporalmente</h2>
+        <p class="form-card__subtitle" style="max-width:320px; margin:0 auto 12px;">
+          Por tu seguridad bloqueamos el inicio de sesión durante <strong>1 hora</strong>
+          después de 5 intentos fallidos.
+        </p>
+        <p style="font-size:0.82rem; color:#9e88b0; margin-bottom:32px; max-width:320px;">
+          Si olvidaste tu contraseña, puedes restablecerla por correo.
+        </p>
+        <a href="{% url 'password_reset' %}" class="btn-submit"
+           style="width:auto; min-width:200px; max-width:300px; padding:0 32px; text-decoration:none; margin-bottom:16px;">
+          Restablecer contraseña
+        </a>
+        <a href="{% url 'landing' %}" class="btn-back" style="align-self:center; margin-bottom:0;">← Volver al inicio</a>
+      </div>
+      <div class="emergency-strip">🆘&nbsp; ¿Estás en peligro ahora? Llama al 155 — Línea gratuita 24 horas</div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

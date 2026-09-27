@@ -136,6 +136,7 @@ AXES_COOLOFF_TIME = 1          # 1 hora de bloqueo tras 5 intentos fallidos
 AXES_LOCKOUT_PARAMETERS = [['username', 'ip_address']]
 AXES_RESET_ON_SUCCESS = True
 AXES_VERBOSE = False
+AXES_LOCKOUT_TEMPLATE = 'medusa/bloqueado.htm'
 
 # ── Email ─────────────────────────────────────────────────────────────────────
 if os.environ.get('BREVO_API_KEY'):
@@ -155,6 +156,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_ADAPTER = 'medusa.adapters.MedusaSocialAccountAdapter'
 
 _GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 SOCIALACCOUNT_PROVIDERS = {
