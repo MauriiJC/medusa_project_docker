@@ -16,7 +16,7 @@ urlpatterns = [
 
     # ── Recuperación de contraseña ────────────────────────────────────────────
     path('password-reset/',
-         auth_views.PasswordResetView.as_view(template_name='medusa/password_reset.htm'),
+         views.MedusaPasswordResetView.as_view(),
          name='password_reset'),
     path('password-reset/enviado/',
          auth_views.PasswordResetDoneView.as_view(template_name='medusa/password_reset_done.htm'),

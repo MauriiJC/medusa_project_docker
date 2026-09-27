@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.contrib.auth.views import PasswordResetView as _PasswordResetView
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -461,3 +462,27 @@ def _send_otp_email(user, code):
         return resp.status_code in (200, 201)
     except Exception:
         return False
+
+
+# ── Recuperación de contraseña ────────────────────────────────────────────────
+class MedusaPasswordResetView(_PasswordResetView):
+    """Igual que PasswordResetView pero fuerza el dominio real del request.
+
+    Django usa el Sites framework por defecto, cuyo dominio inicial es
+    'example.com'. Al pasar domain_override usamos el host real del servidor.
+    """
+    template_name = 'medusa/password_reset.htm'
+    email_template_name = 'medusa/password_reset_email.txt'
+    subject_template_name = 'medusa/password_reset_subject.txt'
+    success_url = '/password-reset/enviado/'
+
+    def form_valid(self, form):
+        form.save(
+            domain_override=self.request.get_host(),
+            use_https=self.request.is_secure(),
+            token_generator=self.token_generator,
+            from_email=self.from_email,
+            request=self.request,
+            extra_email_context=self.extra_email_context,
+        )
+        return HttpResponseRedirect(self.success_url)
